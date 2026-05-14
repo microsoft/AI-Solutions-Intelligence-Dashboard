@@ -10,9 +10,10 @@
 
 **Related Templates & Tools:**
 
-[![v26 Unified PBIT](https://img.shields.io/badge/Report-v26%20Unified%20PBIT-003087)](AI_Usage_v26_Unified.pbit)
+[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
+[![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
 [![Sample Data Generator](https://img.shields.io/badge/Report-Sample%20Data%20Generator-orange)](build_v26_sample_data.py)
 [![PBIT Generator](https://img.shields.io/badge/Tool-PBIT%20Generator-red)](generate_pbit_v26_unified.py)
 
@@ -54,67 +55,121 @@ Drill into per-user activity across all signals, visualize department intensity 
 
 <br>
 
-The dashboard includes **18** interactive report pages. A detailed analysis guide will be available separately.
+The dashboard includes **15** interactive report pages organized into core analytics, MDA-powered pages, reference glossaries, and an action planning page.
 
 ---
 
-### 1. AI Solutions Executive Summary
+### 1. Executive Summary
 
-KPI cards showing total AI users, adoption rate, top tools, and monthly trends. Includes workforce adoption donut, license utilization gauge, gap-to-target indicators, and an executive dashboard with 6 headline metrics. Works on E3 + Copilot baseline tier.
+KPI cards showing total AI users, adoption rate, top tools, and monthly trends. Includes workforce adoption donut, license utilization gauge, gap-to-target indicators, Copilot adoption percentage, and executive narrative verdicts. Works on E3 + Copilot baseline tier.
 
 *Screenshot coming soon*
 *Click image to enlarge*
 
 ---
 
-### 2. AI Solutions Usage Trends
+### 2. Copilot Deep Dive
 
-Per-surface Copilot prompt breakdowns (Teams / Word / Excel / Outlook / PowerPoint / Chat) sourced from Purview Audit `CopilotInteraction` records, department intensity bubble charts (weekly days vs. weekly actions per user), and department-level activity tables with weekly trend filtering. Combines data from Purview Audit, Defender CloudAppEvents, and Entra user profiles.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 3. AI License Recommendations
-
-Adoption-vs-target gap analysis, threshold cards for configurable benchmarks, and license utilization metrics comparing Copilot-licensed users against active usage. Helps identify underutilized licenses and expansion opportunities across the tenant.
+Per-surface Copilot prompt breakdowns (Teams / Word / Excel / Outlook / PowerPoint / Chat) sourced from Purview Audit `CopilotInteraction` records, license utilization metrics, and active Copilot user counts. Requires `ai_copilot_usage_graph.csv`.
 
 *Screenshot coming soon*
 *Click image to enlarge*
 
 ---
 
-### 4. AI Enablement Strategy
+### 3. Behavioral Risk
 
-Shadow AI detection showing unsanctioned/unmanaged AI usage, behavioral risk scoring with file-proximity analysis (files accessed within 5 minutes of AI site visits), off-hours session percentages, and geo anomaly counts. OAuth consent patterns with permission-weighted risk scores. Requires MDE Plan 2 for full population.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 5. AI Enablement Strategy Tiers
-
-Tier comparison coverage matrix mapping each report page to its required license level (E3+Copilot → E5/MDE P2 → MDA). Data Source Health page showing row counts and refresh status per CSV. Self-service tier identification — which pages have data vs. empty visuals tells you exactly where your tenant stands.
+Per-user risk scoring with file-proximity analysis (files accessed within 5 minutes of AI site visits), off-hours session percentages, geo anomaly counts, and composite AI Risk Score. OAuth consent patterns with permission-weighted risk scoring. Requires MDE Plan 2 data.
 
 *Screenshot coming soon*
 *Click image to enlarge*
 
 ---
 
-### 6. AI Solutions Usage Activity
+### 4. Shadow AI
 
-Per-user drilldown across all signals, AI client channel breakdown (Browser / Desktop / API stacked bar per AI site), and the three optional MDA-powered pages: OAuth Anomaly Alerts with ML-driven alert tables, Cloud Discovery shadow AI catalog with risk-scored domains and traffic volumes, and MDA Session Intelligence showing per-session DLP/policy enforcement actions (file uploads, sensitive paste, downloads).
+Unmanaged AI detection showing unsanctioned tool usage, non-Microsoft AI activity, percentage of users on unmanaged tools, and tool sprawl metrics. Identifies shadow AI exposure across the organization.
 
 *Screenshot coming soon*
 *Click image to enlarge*
 
 ---
 
-### 7. Glossary & Metric Definitions
+### 5. Dept Intensity by Solution
 
-Three dedicated glossary pages providing plain-language definitions for adoption metrics, risk metrics, and shadow AI terminology. Static reference pages that work on every license tier with no data dependency.
+Bubble chart plotting weekly days used vs. weekly actions per user (capped at 7), with tool and department slicers for drill-down. Visualizes adoption intensity across organizational units.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 6. Department Breakdown
+
+Department-level activity tables with per-AI-solution breakdowns, weekly trend filtering, and cross-department comparison metrics.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 7. Shadow AI Catalog (MDA)
+
+Cloud Discovery shadow AI catalog with risk-scored domains, traffic volumes (upload/download), transaction counts, and sanction status. **Requires Microsoft Defender for Cloud Apps** — displays a yellow "MDA Required" callout when MDA data is not available.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 8. Benchmarks & Targets
+
+Interactive what-if parameter sliders for Copilot adoption target, workforce AI adoption target, license utilization target, unmanaged AI threshold, and logins-without-CA threshold. Gap-to-target indicators, months-to-target projection, and scorecard status cards.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 9. Tier Comparison
+
+Coverage matrix mapping each report page to its required license level (E3+Copilot → E5/MDE P2 → MDA). Self-service tier identification — which pages have data vs. empty visuals tells you exactly where your tenant stands.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 10. Data Source
+
+Row counts and refresh status per CSV, showing data source health at a glance. Confirms which data files loaded successfully and flags any missing or empty sources.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 11–13. Glossary Pages (Adoption / Risk / Shadow AI)
+
+Three dedicated glossary pages providing plain-language definitions for all adoption metrics, risk metrics, and shadow AI terminology. Static reference pages that work on every license tier with no data dependency.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 14. User Drilldown
+
+Per-user detail table joining all signals — AI activity, Copilot usage, OAuth consents, sign-ins, file proximity, off-hours, and geo anomalies — into a single searchable view.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 15. Action Plan
+
+Executive action planning page with adoption verdicts, risk verdicts, top 3 recommended actions, risk funnel visualization (Total Workforce → AI Users → Unmanaged → Multi-Tool → High-Intensity), scorecard status indicators, and department-level governance scatter quadrant analysis.
 
 *Screenshot coming soon*
 *Click image to enlarge*
@@ -193,14 +248,14 @@ Collect the 10 baseline CSVs using Microsoft Graph PowerShell, Purview Audit exp
 | # | File | Source |
 |---|---|---|
 | 1 | `EntraUsers.csv` | Microsoft Graph (`Get-MgUser` with `-ExpandProperty manager`) |
-| 2 | `ai_solutions_catalog.csv` | Manual — Excel → CSV with columns: `AISolution,Category,Vendor,RiskTier,DefaultDataHandling` |
-| 3 | `ai_copilot_prompts.csv` | Microsoft Purview Audit (`CopilotInteraction` records, flattened via PowerShell) |
+| 2 | `ai_solutions_catalog.csv` | Manual — Excel → CSV with columns: `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup` |
+| 3 | `ai_copilot_usage_graph.csv` | Microsoft Purview Audit (`CopilotInteraction` records, pivoted via PowerShell) OR Microsoft Graph Reports API |
 | 4 | `ai_activity_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents`) |
 | 5 | `ai_oauth_consents.csv` | Entra Audit Logs via Graph (`Get-MgAuditLogDirectoryAudit`) |
 | 6 | `ai_sso_signins.csv` | Entra Sign-In Logs via Graph (`Get-MgAuditLogSignIn`) |
 | 7 | `ai_file_proximity.csv` | Defender XDR Advanced Hunting (`DeviceFileEvents` joined with `DeviceNetworkEvents`) |
 | 8 | `ai_offhours_geo.csv` | Defender XDR Advanced Hunting (`AADSignInEventsBeta`) |
-| 9 | `ai_copilot_usage_graph.csv` | Microsoft Graph Reports API — `getMicrosoft365CopilotUsageUserDetail(period='D90')` (optional but recommended) |
+| 9 | `ai_copilot_usage_graph.csv` | Microsoft Graph Reports API — `getMicrosoft365CopilotUsageUserDetail(period='D90')` (alternative to Purview source in #3) |
 | 10 | `ai_client_channel.csv` | Defender XDR Advanced Hunting (Browser / Desktop / API split from UserAgent) |
 
 **Then create 3 MDA stub files** (header-only CSVs):
@@ -287,7 +342,7 @@ Ensure you have the required software, roles, and (optionally) Defender services
 
 #### Option C: Enable Microsoft Defender for Endpoint (MDE Plan 2)
 
-Required for pages 4 (Shadow AI), 7 (Behavioral Risk), 8 (User Drilldown), and 11 (AI Client Channel).
+Required for the Behavioral Risk, Shadow AI, and User Drilldown pages.
 
 1. **Verify licence** — Microsoft 365 admin centre → Billing → Your products. Confirm you have M365 E5, or E3 + MDE Plan 2 add-on.
 2. **Onboard devices** — Defender XDR portal → Settings → Endpoints → Onboarding. Use Intune (simplest), Group Policy, or local script.
@@ -306,13 +361,13 @@ Required for pages 4 (Shadow AI), 7 (Behavioral Risk), 8 (User Drilldown), and 1
 
 <br>
 
-1. Download [AI_Usage_v26_Unified.pbit](AI_Usage_v26_Unified.pbit)
+1. Download [AI Solutions Unified May 4th v5.pbit](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
 2. Double-click the file → Power BI Desktop opens
 3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path **with a trailing slash**:
    - Windows: `C:\AI_Usage_Data\`
    - macOS: `/Users/yourname/AI_Usage_Data/`
 4. Click **Load** → wait 1–3 minutes for refresh
-5. **File → Save As** → save as `.pbix` with a descriptive name (e.g. `AI_Usage_v26_<TenantName>_<YYYY-MM-DD>.pbix`)
+5. **File → Save As** → save as `.pbix` with a descriptive name (e.g. `AI_Solutions_<TenantName>_<YYYY-MM-DD>.pbix`)
 
 </details>
 
@@ -325,18 +380,20 @@ Required for pages 4 (Shadow AI), 7 (Behavioral Risk), 8 (User Drilldown), and 1
 
 | Check | Path A (No MDA) | Path B (Full MDA) |
 |---|---|---|
-| Page 1 KPI cards populated | ✅ | ✅ |
-| Page 5 bubble chart, X-axis 0–7 | ✅ | ✅ |
-| Page 7 per-user averages displayed | ✅ | ✅ |
-| Page 11 stacked bar by AI site | ✅ | ✅ |
-| Pages 12–14 MDA callout + visuals | Yellow callout + empty visuals | Yellow callout + populated visuals |
+| Executive Summary KPI cards populated | ✅ | ✅ |
+| Dept Intensity bubble chart, X-axis 0–7 | ✅ | ✅ |
+| Behavioral Risk per-user averages displayed | ✅ | ✅ |
+| Shadow AI page, unmanaged AI metrics | ✅ | ✅ |
+| Shadow AI Catalog (MDA) | Yellow callout + empty visuals | Yellow callout + populated visuals |
+| Benchmarks & Targets sliders | ✅ | ✅ |
+| Action Plan verdicts & scorecards | ✅ | ✅ |
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | "We couldn't find the file" on load | Folder path missing trailing slash | Add trailing `\` (Windows) or `/` (macOS) |
 | Pages 12/13/14 visuals blank but no yellow callout | Stub CSV missing | Create the header-only CSVs from Path A instructions |
-| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_prompts.csv` from Purview Audit |
-| Weekly Days Used per User > 7 | Old PBIT version | Re-download v26; the measure is hard-capped at 7 |
+| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_usage_graph.csv` from Purview Audit |
+| Weekly Days Used per User > 7 | Old PBIT version | Re-download the latest PBIT; the measure is hard-capped at 7 |
 | "Behavioral Risk" page empty | Missing MDE Plan 2 export | Re-export `ai_file_proximity.csv` and `ai_offhours_geo.csv` |
 | Calendar slicer day-grain doesn't filter | Expected — fact tables are at month grain | Use Year / Quarter / Month slicer instead |
 | `AppGovernanceAlert` table not found | App Governance not enabled | Enable App Governance in Defender XDR → Settings → Cloud Apps |
@@ -372,7 +429,7 @@ Required for pages 4 (Shadow AI), 7 (Behavioral Risk), 8 (User Drilldown), and 1
 3. In Power BI Desktop: **Home → Refresh** → Save
 4. (Or publish to Power BI Service and configure scheduled refresh against OneDrive / SharePoint hosting the CSVs)
 
-When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with real exports, refresh the report — pages 12, 13, 14 light up automatically. **No PBIT change needed.**
+When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with real exports, refresh the report — MDA pages light up automatically. **No PBIT change needed.**
 
 </details>
 
@@ -387,7 +444,9 @@ When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with rea
 
 **Architecture:** The v26 Unified PBIT replaces two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a single template that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly yellow overlay when the underlying data is empty. No conditional DAX logic is needed — empty CSVs simply produce empty visuals.
 
-**Tier model:** Only 3 net-new pages truly require MDA. The other 15 work on E5 + MDE Plan 2 alone — which is what most enterprise customers already own. Pages 1–3, 5, 6, 9, 10 work on E3+Copilot baseline. Pages 4, 7, 8, 11 need MDE Plan 2. Pages 12–14 need MDA.
+**Tier model:** The report contains 15 pages total. Pages that work on E3+Copilot baseline: Executive Summary, Copilot Deep Dive, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets, Action Plan, Glossaries. Pages that need MDE Plan 2: Behavioral Risk, Shadow AI. MDA page: Shadow AI Catalog (MDA). Reference pages: Tier Comparison, Data Source, User Drilldown.
+
+**Measures:** 122 total measures across 6 tables, including 5 interactive what-if parameter sliders, executive narrative verdicts, risk funnels, and department-level scatter quadrant analysis.
 
 **Empty-CSV fallback:** Rather than `try ... otherwise` in M (which can mask real refresh errors), customers create header-only stub CSVs. When MDA is later deployed, simply overwrite the stubs with real exports — same PBIT, no changes needed.
 

@@ -1,0 +1,829 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// AI Solutions Intelligence Dashboard — Data Collection Query Pack
+// Version: v26 Unified (aligned with May 2026 PBIT)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// This file contains all PowerShell scripts and KQL (Kusto Query Language)
+// queries needed to populate the dashboard's 12 CSV data files.
+//
+// Section A = PowerShell / Graph scripts (run in PowerShell 7+)
+// Section B = KQL queries (run in Defender XDR → Advanced Hunting)
+//
+// IMPORTANT: Each query's output columns must EXACTLY match the schemas below.
+//            Do NOT rename columns — Power Query expects these exact headers.
+//
+// Prerequisites:
+//   - PowerShell 7+ with Microsoft.Graph and ExchangeOnlineManagement modules
+//   - Microsoft Defender XDR portal access (Security Reader minimum)
+//   - Microsoft Purview Audit access (Audit Reader or eDiscovery Manager)
+//   - Permissions: User.Read.All, Directory.Read.All, Reports.Read.All,
+//                  AuditLog.Read.All, Application.Read.All
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION A1 — EntraUsers.csv (PowerShell / Microsoft Graph)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: PowerShell 7+
+// Output: EntraUsers.csv
+// Schema: userPrincipalName, displayName, department, jobTitle, city, country,
+//         companyName, accountEnabled, userType, createdDateTime, hasLicense,
+//         assignedLicenses, manager_displayName, manager_userPrincipalName
+//
+// <powershell>
+// Connect-MgGraph -Scopes "User.Read.All","Directory.Read.All"
+//
+// Get-MgUser -All `
+//   -Property "userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,assignedLicenses,manager" `
+//   -ExpandProperty manager |
+//   Select-Object userPrincipalName, displayName, department, jobTitle, city, country, companyName,
+//                 accountEnabled, userType, createdDateTime,
+//     @{n='hasLicense';e={ if ($_.AssignedLicenses.Count -gt 0) {'TRUE'} else {'FALSE'} }},
+//     @{n='assignedLicenses';e={ ($_.AssignedLicenses.SkuId) -join ';' }},
+//     @{n='manager_displayName';      e={ $_.Manager.AdditionalProperties.displayName }},
+//     @{n='manager_userPrincipalName';e={ $_.Manager.AdditionalProperties.userPrincipalName }} |
+//   Export-Csv -NoTypeInformation -Encoding UTF8 EntraUsers.csv
+//
+// # Optional: Replace Copilot SKU GUID with a readable label
+// (Get-Content EntraUsers.csv) -replace '05e9a617-0261-4cee-bb44-138d3ef5d965','Copilot_M365' |
+//   Set-Content EntraUsers.csv
+// </powershell>
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION A2 — ai_copilot_usage_graph.csv (PowerShell / Purview Audit)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: PowerShell 7+ (requires ExchangeOnlineManagement module)
+// Output: ai_copilot_usage_graph.csv
+// Schema: UserPrincipalName, YearMonth, TeamsPrompts, WordPrompts, ExcelPrompts,
+//         OutlookPrompts, PowerPointPrompts, ChatPrompts, TotalPrompts,
+//         ActiveDays, LastActivityDate
+//
+// This query searches Purview Audit for CopilotInteraction events, pivots them
+// by workload (Teams/Word/Excel/Outlook/PowerPoint/Chat) per user per month.
+//
+// NOTE: The Power Query table is named AI_CopilotUsage and loads from
+//       "ai_copilot_usage_graph.csv". Name your output file accordingly.
+//
+// ALTERNATIVE: If you prefer the Graph Reports API (simpler but less granular):
+//   GET https://graph.microsoft.com/v1.0/reports/getMicrosoft365CopilotUsageUserDetail(period='D90')
+//   Save the response as ai_copilot_usage_graph.csv. The Graph API returns the
+//   same column schema. Use Purview for richer per-surface prompt counts.
+//
+// <powershell>
+// # 1. Connect to Exchange Online (Purview audit uses EXO cmdlets)
+// Connect-ExchangeOnline
+//
+// # 2. Search for Copilot interaction events (adjust dates as needed)
+// $startDate = (Get-Date).AddDays(-180).ToString("yyyy-MM-dd")
+// $endDate   = (Get-Date).ToString("yyyy-MM-dd")
+//
+// # 3. Paginate to collect all records
+// $allEvents = @()
+// $sessionId = [guid]::NewGuid().ToString()
+// do {
+//     $batch = Search-UnifiedAuditLog `
+//         -StartDate $startDate -EndDate $endDate `
+//         -Operations "CopilotInteraction" `
+//         -ResultSize 5000 `
+//         -SessionId $sessionId `
+//         -SessionCommand ReturnLargeSet
+//     if ($batch) { $allEvents += $batch }
+// } while ($batch.Count -eq 5000)
+//
+// Write-Host "Retrieved $($allEvents.Count) CopilotInteraction events"
+//
+// # 4. Parse audit data and extract workload + user
+// $parsed = $allEvents | ForEach-Object {
+//     $data = $_.AuditData | ConvertFrom-Json
+//     [PSCustomObject]@{
+//         UPN       = $data.UserId.ToLower()
+//         YearMonth = $data.CreationDate.ToString("yyyy-MM")
+//         Date      = $data.CreationDate.ToString("yyyy-MM-dd")
+//         Workload  = switch ($data.Workload) {
+//             "MicrosoftTeams" { "Teams" }
+//             "Word"           { "Word" }
+//             "Excel"          { "Excel" }
+//             "Outlook"        { "Outlook" }
+//             "PowerPoint"     { "PowerPoint" }
+//             "Bing"           { "Chat" }
+//             "M365Chat"       { "Chat" }
+//             "Microsoft365"   { "Chat" }
+//             default          { $data.Workload }
+//         }
+//         Prompts   = if ($data.CopilotEventData.Prompts) {
+//                         $data.CopilotEventData.Prompts.Count
+//                     } else { 1 }
+//     }
+// }
+//
+// # 5. Pivot: one row per user × month with per-surface prompt counts
+// $pivoted = $parsed | Group-Object UPN, YearMonth | ForEach-Object {
+//     $grp      = $_.Group
+//     $upn      = $grp[0].UPN
+//     $ym       = $grp[0].YearMonth
+//     $days     = ($grp | Select-Object -ExpandProperty Date -Unique).Count
+//     $lastDate = ($grp | Sort-Object Date | Select-Object -Last 1).Date
+//
+//     $teams = ($grp | Where-Object Workload -eq "Teams" |
+//               Measure-Object Prompts -Sum).Sum
+//     $word  = ($grp | Where-Object Workload -eq "Word" |
+//               Measure-Object Prompts -Sum).Sum
+//     $excel = ($grp | Where-Object Workload -eq "Excel" |
+//               Measure-Object Prompts -Sum).Sum
+//     $outl  = ($grp | Where-Object Workload -eq "Outlook" |
+//               Measure-Object Prompts -Sum).Sum
+//     $ppt   = ($grp | Where-Object Workload -eq "PowerPoint" |
+//               Measure-Object Prompts -Sum).Sum
+//     $chat  = ($grp | Where-Object Workload -eq "Chat" |
+//               Measure-Object Prompts -Sum).Sum
+//
+//     [PSCustomObject]@{
+//         UserPrincipalName = $upn
+//         YearMonth         = $ym
+//         TeamsPrompts      = [int]$teams
+//         WordPrompts       = [int]$word
+//         ExcelPrompts      = [int]$excel
+//         OutlookPrompts    = [int]$outl
+//         PowerPointPrompts = [int]$ppt
+//         ChatPrompts       = [int]$chat
+//         TotalPrompts      = [int]($teams + $word + $excel + $outl + $ppt + $chat)
+//         ActiveDays        = $days
+//         LastActivityDate  = $lastDate
+//     }
+// }
+//
+// $pivoted | Export-Csv -NoTypeInformation -Encoding UTF8 ai_copilot_usage_graph.csv
+// Write-Host "Exported $($pivoted.Count) user-month rows to ai_copilot_usage_graph.csv"
+// </powershell>
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION A3 — ai_oauth_consents.csv (PowerShell / Entra Audit Logs)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: PowerShell 7+
+// Output: ai_oauth_consents.csv
+// Schema: UPN, AppName, YearMonth, ConsentCount, LastConsent,
+//         PermissionWeight, Permissions
+//
+// <powershell>
+// Connect-MgGraph -Scopes "AuditLog.Read.All","Application.Read.All"
+//
+// $startDate = (Get-Date).AddDays(-180).ToString("yyyy-MM-ddTHH:mm:ssZ")
+//
+// # Fetch consent-grant audit events
+// $consentLogs = Get-MgAuditLogDirectoryAudit -All `
+//     -Filter "activityDisplayName eq 'Consent to application' and activityDateTime ge $startDate" `
+//     -Property "activityDateTime,targetResources,initiatedBy"
+//
+// # AI app keywords to filter on — extend this list for your tenant
+// $aiKeywords = @("openai","copilot","chatgpt","claude","anthropic","gemini",
+//                 "bard","midjourney","perplexity","hugging","stability",
+//                 "github copilot","bing chat","dall-e","jasper","grammarly",
+//                 "notion ai","adobe firefly","canva ai","synthesia","runway")
+//
+// $parsed = $consentLogs | ForEach-Object {
+//     $appName = ($_.TargetResources | Where-Object Type -eq "ServicePrincipal" |
+//                 Select-Object -First 1).DisplayName
+//     $upn     = $_.InitiatedBy.User.UserPrincipalName
+//
+//     # Check if app name matches any AI keyword
+//     $isAI = $false
+//     foreach ($kw in $aiKeywords) {
+//         if ($appName -like "*$kw*") { $isAI = $true; break }
+//     }
+//
+//     if ($isAI -and $upn) {
+//         $perms = ($_.TargetResources |
+//             Where-Object Type -eq "ServicePrincipal" |
+//             Select-Object -ExpandProperty ModifiedProperties |
+//             Where-Object DisplayName -eq "DelegatedPermissionGrant.Scope" |
+//             Select-Object -ExpandProperty NewValue) -join ", "
+//
+//         # Simple permission weight: count distinct scopes, add bonus for
+//         # high-privilege scopes (Mail, Files, Sites)
+//         $scopeList = $perms -split "[,;\s]+" | Where-Object { $_ }
+//         $weight = $scopeList.Count
+//         foreach ($s in $scopeList) {
+//             if ($s -match "Mail\.|Files\.|Sites\.") { $weight += 5 }
+//             if ($s -match "\.ReadWrite") { $weight += 2 }
+//         }
+//
+//         [PSCustomObject]@{
+//             UPN       = $upn.ToLower()
+//             AppName   = $appName
+//             Timestamp = $_.ActivityDateTime
+//             YearMonth = $_.ActivityDateTime.ToString("yyyy-MM")
+//             Weight    = $weight
+//             Perms     = if ($perms) { $perms } else { "Unknown" }
+//         }
+//     }
+// }
+//
+// # Aggregate to user × app × month
+// $aggregated = $parsed | Group-Object UPN, AppName, YearMonth | ForEach-Object {
+//     $grp   = $_.Group
+//     $last  = ($grp | Sort-Object Timestamp | Select-Object -Last 1).Timestamp
+//     $perms = ($grp | Select-Object -ExpandProperty Perms -Unique) -join "; "
+//     $wt    = ($grp | Measure-Object Weight -Max).Maximum
+//
+//     [PSCustomObject]@{
+//         UPN              = $grp[0].UPN
+//         AppName          = $grp[0].AppName
+//         YearMonth        = $grp[0].YearMonth
+//         ConsentCount     = $grp.Count
+//         LastConsent      = $last.ToString("yyyy-MM-dd")
+//         PermissionWeight = $wt
+//         Permissions      = $perms
+//     }
+// }
+//
+// $aggregated | Export-Csv -NoTypeInformation -Encoding UTF8 ai_oauth_consents.csv
+// Write-Host "Exported $($aggregated.Count) rows to ai_oauth_consents.csv"
+// </powershell>
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION A4 — ai_sso_signins.csv (PowerShell / Entra Sign-In Logs)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: PowerShell 7+
+// Output: ai_sso_signins.csv
+// Schema: UPN, Application, YearMonth, SignInCount, DistinctDays, IsGuest,
+//         Countries, HasConditionalAccess, LastSignIn
+//
+// <powershell>
+// Connect-MgGraph -Scopes "AuditLog.Read.All","Directory.Read.All"
+//
+// $startDate = (Get-Date).AddDays(-90).ToString("yyyy-MM-ddTHH:mm:ssZ")
+//
+// # AI app keywords (same list as A3)
+// $aiKeywords = @("openai","copilot","chatgpt","claude","anthropic","gemini",
+//                 "bard","midjourney","perplexity","hugging","stability",
+//                 "github copilot","bing chat","dall-e","jasper","grammarly",
+//                 "notion ai","adobe firefly","canva ai","synthesia","runway")
+//
+// # Fetch sign-in logs (may take a few minutes for large tenants)
+// $signIns = Get-MgAuditLogSignIn -All `
+//     -Filter "createdDateTime ge $startDate" `
+//     -Property "userPrincipalName,appDisplayName,createdDateTime,location,userType,conditionalAccessStatus,status"
+//
+// # Filter to AI apps and successful sign-ins
+// $aiSignIns = $signIns | Where-Object {
+//     $app = $_.AppDisplayName
+//     $isAI = $false
+//     foreach ($kw in $aiKeywords) {
+//         if ($app -like "*$kw*") { $isAI = $true; break }
+//     }
+//     $isAI -and $_.Status.ErrorCode -eq 0
+// } | ForEach-Object {
+//     [PSCustomObject]@{
+//         UPN       = $_.UserPrincipalName.ToLower()
+//         App       = $_.AppDisplayName
+//         Date      = $_.CreatedDateTime.ToString("yyyy-MM-dd")
+//         YearMonth = $_.CreatedDateTime.ToString("yyyy-MM")
+//         Country   = $_.Location.CountryOrRegion
+//         IsGuest   = if ($_.UserType -eq "Guest") { "TRUE" } else { "FALSE" }
+//         HasCA     = if ($_.ConditionalAccessStatus -eq "success") { "TRUE" } else { "FALSE" }
+//     }
+// }
+//
+// # Aggregate to user × app × month
+// $aggregated = $aiSignIns | Group-Object UPN, App, YearMonth | ForEach-Object {
+//     $grp       = $_.Group
+//     $days      = ($grp | Select-Object -ExpandProperty Date -Unique).Count
+//     $countries = ($grp | Select-Object -ExpandProperty Country -Unique |
+//                   Where-Object { $_ }) -join "; "
+//     $hasCA     = if ($grp | Where-Object HasCA -eq "TRUE") { "TRUE" } else { "FALSE" }
+//     $lastDate  = ($grp | Sort-Object Date | Select-Object -Last 1).Date
+//
+//     [PSCustomObject]@{
+//         UPN                  = $grp[0].UPN
+//         Application          = $grp[0].App
+//         YearMonth            = $grp[0].YearMonth
+//         SignInCount          = $grp.Count
+//         DistinctDays         = $days
+//         IsGuest              = $grp[0].IsGuest
+//         Countries            = if ($countries) { $countries } else { "Unknown" }
+//         HasConditionalAccess = $hasCA
+//         LastSignIn           = $lastDate
+//     }
+// }
+//
+// $aggregated | Export-Csv -NoTypeInformation -Encoding UTF8 ai_sso_signins.csv
+// Write-Host "Exported $($aggregated.Count) rows to ai_sso_signins.csv"
+// </powershell>
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION A5 — ai_solutions_catalog.csv (Reference / Manual)
+// ─────────────────────────────────────────────────────────────────────────────
+// Create manually in Excel or a text editor.
+// Output: ai_solutions_catalog.csv
+// Schema: AISolution, Category, Vendor, RiskTier, DefaultDataHandling, SolutionGroup
+//
+// RiskTier values: Sanctioned | Conditional | Unsanctioned
+// SolutionGroup: a display grouping label (e.g. "Microsoft Copilot", "Third-Party AI")
+//
+// The LicenseStatus column is computed in DAX:
+//   Sanctioned or Conditional → "Licensed (Org-Provided)"
+//   Unsanctioned → "Unlicensed (Shadow AI)"
+//
+// Seed example (copy and extend for your tenant):
+//
+// AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup
+// Microsoft 365 Copilot,Productivity,Microsoft,Sanctioned,Internal Only,Microsoft Copilot
+// GitHub Copilot,Development,Microsoft,Sanctioned,Code Context,Microsoft Copilot
+// Bing Chat Enterprise,Search,Microsoft,Sanctioned,Internal Only,Microsoft Copilot
+// ChatGPT Enterprise,General AI,OpenAI,Conditional,Org Managed,Licensed Third-Party
+// ChatGPT Free,General AI,OpenAI,Unsanctioned,Public Cloud,Shadow AI
+// ChatGPT Plus,General AI,OpenAI,Unsanctioned,Public Cloud,Shadow AI
+// Claude,General AI,Anthropic,Unsanctioned,Public Cloud,Shadow AI
+// Gemini,General AI,Google,Unsanctioned,Public Cloud,Shadow AI
+// Perplexity,Search AI,Perplexity,Unsanctioned,Public Cloud,Shadow AI
+// Midjourney,Image Generation,Midjourney,Unsanctioned,Public Cloud,Shadow AI
+// DALL-E,Image Generation,OpenAI,Conditional,Org Managed,Licensed Third-Party
+// Grammarly,Writing,Grammarly,Conditional,Mixed,Licensed Third-Party
+// Notion AI,Productivity,Notion,Unsanctioned,Public Cloud,Shadow AI
+// Adobe Firefly,Design,Adobe,Conditional,Org Managed,Licensed Third-Party
+// Jasper,Marketing,Jasper,Unsanctioned,Public Cloud,Shadow AI
+// Synthesia,Video,Synthesia,Unsanctioned,Public Cloud,Shadow AI
+// Runway,Video,Runway,Unsanctioned,Public Cloud,Shadow AI
+// Stability AI,Image Generation,Stability AI,Unsanctioned,Public Cloud,Shadow AI
+// Hugging Face,ML Platform,Hugging Face,Unsanctioned,Public Cloud,Shadow AI
+// Canva AI,Design,Canva,Conditional,Org Managed,Licensed Third-Party
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION B — KQL Queries (run in Defender XDR → Advanced Hunting)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Instructions:
+//   1. Go to https://security.microsoft.com → Hunting → Advanced Hunting
+//   2. Paste the KQL query for the section you need
+//   3. Click "Run query"
+//   4. Click "Export" → "Export to CSV"
+//   5. Rename the downloaded file to match the expected filename
+//
+// The AI domain list below is used across multiple queries. Customize it for
+// your tenant by adding/removing domains as needed.
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B2 — ai_activity_sessions.csv (CloudAppEvents)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_activity_sessions.csv
+// Schema: UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
+//         DistinctDevices, Category, RiskTier
+//
+// This query identifies AI tool usage from CloudAppEvents, mapping app names
+// to the solutions catalog. Adjust the app-name matching for your environment.
+
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "copilot.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com",
+    "claude.ai", "api.anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai",
+    "midjourney.com",
+    "github.com/copilot", "copilot.github.com",
+    "bing.com/chat",
+    "huggingface.co",
+    "stability.ai",
+    "jasper.ai",
+    "grammarly.com",
+    "notion.so",
+    "firefly.adobe.com",
+    "app.synthesia.io",
+    "runwayml.com",
+    "canva.com"
+]);
+CloudAppEvents
+| where Timestamp > ago(180d)
+| where ActionType in ("AppAccessedViaAPI", "AppUsed", "TabletAccessed", "FileUploaded", "FileDownloaded", "MessageSent", "SearchPerformed")
+    or Application has_any (AIDomains)
+    or RawEventData has_any (AIDomains)
+| extend AISolution = case(
+    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
+    Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
+    Application has "Claude" or Application has "Anthropic", "Claude",
+    Application has "Gemini" or Application has "Bard", "Gemini",
+    Application has "Perplexity", "Perplexity",
+    Application has "Midjourney", "Midjourney",
+    Application has "Bing Chat" or Application has "Bing Copilot", "Bing Chat Enterprise",
+    Application has "Grammarly", "Grammarly",
+    Application has "Notion", "Notion AI",
+    Application has "Firefly" or Application has "Adobe", "Adobe Firefly",
+    Application has "Jasper", "Jasper",
+    Application has "Synthesia", "Synthesia",
+    Application has "Runway", "Runway",
+    Application has "Hugging Face", "Hugging Face",
+    Application has "Canva", "Canva AI",
+    Application has "Stability", "Stability AI",
+    Application // fallback: use raw app name
+)
+| where isnotempty(AISolution)
+| extend UPN = tolower(AccountObjectId)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize
+    Sessions = count(),
+    ActiveDays = dcount(bin(Timestamp, 1d)),
+    EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
+    DistinctDevices = dcount(DeviceType)
+    by UPN, AISolution, YearMonth
+| extend Category = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
+    AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
+    AISolution in ("Grammarly", "Jasper"), "Writing",
+    AISolution in ("Notion AI", "Canva AI"), "Productivity",
+    AISolution in ("Synthesia", "Runway"), "Video",
+    "Other"
+)
+| extend RiskTier = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
+    "Unsanctioned"
+)
+| project UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier
+| order by UPN asc, YearMonth asc
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B3 — ai_file_proximity.csv (DeviceFileEvents + DeviceNetworkEvents)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_file_proximity.csv
+// Schema: Timestamp, UPN, AISolution, YearMonth, FileName, FolderCategory,
+//         FolderPath, SecondsToAI, NameMatchesSensitivePattern,
+//         FolderMatchesSensitive
+//
+// Requires: MDE Plan 2 (DeviceFileEvents + DeviceNetworkEvents tables)
+//
+// This query detects files accessed within 5 minutes of an AI website visit,
+// indicating potential data exfiltration risk.
+
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
+    "claude.ai", "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "midjourney.com", "huggingface.co",
+    "stability.ai", "jasper.ai", "grammarly.com", "notion.so",
+    "firefly.adobe.com", "runwayml.com", "canva.com",
+    "app.synthesia.io"
+]);
+let SensitiveNamePatterns = dynamic([
+    "confidential", "secret", "password", "credential", "private",
+    "restricted", "internal", "draft", "salary", "ssn", "pii",
+    "financial", "budget", "forecast", "strategy", "merger",
+    "acquisition", "termination", "layoff", "patent"
+]);
+let SensitiveFolderPatterns = dynamic([
+    "confidential", "restricted", "hr", "legal", "finance",
+    "executive", "board", "compliance", "audit", "security"
+]);
+// Step 1: Find AI site visits
+let AIVisits =
+    DeviceNetworkEvents
+    | where Timestamp > ago(90d)
+    | where ActionType == "ConnectionSuccess"
+    | where RemoteUrl has_any (AIDomains)
+    | extend AISolution = case(
+        RemoteUrl has "copilot.microsoft.com", "Microsoft 365 Copilot",
+        RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "ChatGPT",
+        RemoteUrl has "claude.ai", "Claude",
+        RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "Gemini",
+        RemoteUrl has "perplexity.ai", "Perplexity",
+        RemoteUrl has "midjourney.com", "Midjourney",
+        RemoteUrl has "huggingface.co", "Hugging Face",
+        RemoteUrl has "stability.ai", "Stability AI",
+        RemoteUrl has "jasper.ai", "Jasper",
+        RemoteUrl has "grammarly.com", "Grammarly",
+        RemoteUrl has "notion.so", "Notion AI",
+        RemoteUrl has "firefly.adobe.com", "Adobe Firefly",
+        RemoteUrl has "runwayml.com", "Runway",
+        RemoteUrl has "canva.com", "Canva AI",
+        RemoteUrl has "app.synthesia.io", "Synthesia",
+        "Other AI"
+    )
+    | project AITimestamp = Timestamp, DeviceId, AISolution;
+// Step 2: Find file access events
+let FileAccess =
+    DeviceFileEvents
+    | where Timestamp > ago(90d)
+    | where ActionType in ("FileCreated", "FileModified", "FileRenamed", "FileCopied")
+    | where FileName !endswith ".tmp" and FileName !endswith ".log"
+    | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
+              InitiatingProcessAccountUpn;
+// Step 3: Join — files accessed within 5 minutes of AI visit
+AIVisits
+| join kind=inner FileAccess on DeviceId
+| where FileTimestamp between (AITimestamp .. (AITimestamp + 5m))
+| extend SecondsToAI = datetime_diff("second", FileTimestamp, AITimestamp)
+| extend UPN = tolower(InitiatingProcessAccountUpn)
+| extend YearMonth = format_datetime(AITimestamp, "yyyy-MM")
+| extend FolderCategory = case(
+    FolderPath has "Desktop", "Desktop",
+    FolderPath has "Downloads", "Downloads",
+    FolderPath has "Documents", "Documents",
+    FolderPath has "OneDrive", "OneDrive",
+    FolderPath has "SharePoint", "SharePoint",
+    "Other"
+)
+| extend NameMatchesSensitivePattern = iff(FileName has_any (SensitiveNamePatterns), 1, 0)
+| extend FolderMatchesSensitive = iff(FolderPath has_any (SensitiveFolderPatterns), 1, 0)
+| project Timestamp = AITimestamp, UPN, AISolution, YearMonth, FileName,
+          FolderCategory, FolderPath, SecondsToAI,
+          NameMatchesSensitivePattern, FolderMatchesSensitive
+| order by Timestamp asc
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B4 — ai_offhours_geo.csv (AADSignInEventsBeta)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_offhours_geo.csv
+// Schema: UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
+//         DistinctCountries, AnomalousCountryCount, AnomalousCountries
+//
+// Off-hours defined as before 7 AM or after 7 PM local time (UTC used here —
+// adjust for your org's primary timezone if needed).
+// Anomalous country = any country that appears in <5% of a user's sign-ins.
+
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
+    "claude.ai", "gemini.google.com", "perplexity.ai",
+    "midjourney.com", "huggingface.co", "grammarly.com",
+    "notion.so", "jasper.ai", "stability.ai",
+    "firefly.adobe.com", "canva.com", "runwayml.com",
+    "app.synthesia.io"
+]);
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
+    "ChatGPT", "OpenAI", "Claude", "Anthropic",
+    "Gemini", "Perplexity", "Midjourney", "Grammarly",
+    "Notion", "Jasper", "Adobe Firefly", "Canva"
+]);
+// Step 1: Identify AI-related sign-ins
+let AISignIns =
+    AADSignInEventsBeta
+    | where Timestamp > ago(90d)
+    | where ErrorCode == 0  // successful sign-ins only
+    | where Application has_any (AIAppNames)
+        or ResourceDisplayName has_any (AIAppNames)
+    | extend UPN = tolower(AccountUpn)
+    | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+    | extend HourOfDay = hourofday(Timestamp)
+    | extend IsOffHours = iff(HourOfDay < 7 or HourOfDay >= 19, 1, 0)
+    | extend Country = tostring(LocationDetails.countryOrRegion)
+    | project UPN, YearMonth, Timestamp, IsOffHours, Country;
+// Step 2: Compute per-user primary country (for anomaly detection)
+let UserPrimaryCountry =
+    AISignIns
+    | summarize CountryCount = count() by UPN, Country
+    | summarize TotalEvents = sum(CountryCount), arg_max(CountryCount, Country) by UPN
+    | project UPN, PrimaryCountry = Country;
+// Step 3: Aggregate
+AISignIns
+| summarize
+    TotalSessions = count(),
+    OffHoursSessions = countif(IsOffHours == 1),
+    DistinctCountries = dcount(Country),
+    Countries = make_set(Country)
+    by UPN, YearMonth
+| extend OffHoursPct = round(todouble(OffHoursSessions) / todouble(TotalSessions), 4)
+| join kind=leftouter UserPrimaryCountry on UPN
+| extend AnomalousCountries = set_difference(Countries, dynamic([PrimaryCountry]))
+| extend AnomalousCountryCount = array_length(AnomalousCountries)
+| extend AnomalousCountries = iff(AnomalousCountryCount > 0,
+    strcat_array(AnomalousCountries, "; "), "")
+| project UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
+          DistinctCountries, AnomalousCountryCount, AnomalousCountries
+| order by UPN asc, YearMonth asc
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B5 — ai_client_channel.csv (Browser / Desktop / API split)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_client_channel.csv
+// Schema: AISite, Channel, YearMonth, EventCount
+
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "copilot.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com",
+    "claude.ai", "api.anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "midjourney.com",
+    "huggingface.co", "stability.ai", "jasper.ai",
+    "grammarly.com", "notion.so", "firefly.adobe.com",
+    "runwayml.com", "canva.com", "app.synthesia.io"
+]);
+DeviceNetworkEvents
+| where Timestamp > ago(90d)
+| where ActionType == "ConnectionSuccess"
+| where RemoteUrl has_any (AIDomains)
+| extend AISite = case(
+    RemoteUrl has "copilot.microsoft.com" or RemoteUrl has "copilot.cloud.microsoft", "copilot.microsoft.com",
+    RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "chatgpt.com",
+    RemoteUrl has "api.openai.com", "api.openai.com",
+    RemoteUrl has "claude.ai", "claude.ai",
+    RemoteUrl has "api.anthropic.com", "api.anthropic.com",
+    RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "gemini.google.com",
+    RemoteUrl has "perplexity.ai", "perplexity.ai",
+    RemoteUrl has "midjourney.com", "midjourney.com",
+    RemoteUrl has "huggingface.co", "huggingface.co",
+    RemoteUrl has "stability.ai", "stability.ai",
+    RemoteUrl has "jasper.ai", "jasper.ai",
+    RemoteUrl has "grammarly.com", "grammarly.com",
+    RemoteUrl has "notion.so", "notion.so",
+    RemoteUrl has "firefly.adobe.com", "firefly.adobe.com",
+    RemoteUrl has "runwayml.com", "runwayml.com",
+    RemoteUrl has "canva.com", "canva.com",
+    RemoteUrl has "app.synthesia.io", "app.synthesia.io",
+    RemoteUrl
+)
+| extend Channel = case(
+    InitiatingProcessFileName has_any ("chrome.exe", "msedge.exe", "firefox.exe",
+        "brave.exe", "safari", "opera.exe", "iexplore.exe",
+        "Chrome", "Safari", "Firefox"), "Browser",
+    InitiatingProcessFileName has_any ("python", "node", "java", "curl",
+        "powershell", "pwsh", "cmd.exe", "bash",
+        "dotnet", "go"), "API",
+    "Desktop"
+)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize EventCount = count() by AISite, Channel, YearMonth
+| order by AISite asc, YearMonth asc, Channel asc
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B6 — ai_appgov_alerts.csv (App Governance ML Alerts)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_appgov_alerts.csv
+// Schema: Timestamp, YearMonth, UPN, AppName, AlertType, Severity, Description
+//
+// Requires: Microsoft Defender for Cloud Apps + App Governance enabled
+// NOTE: If "AlertInfo" or "AlertEvidence" tables are not available, App
+//       Governance is not enabled in your tenant. See:
+//       https://learn.microsoft.com/defender-cloud-apps/app-governance-manage-app-governance
+
+let AIAppNames = dynamic([
+    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
+    "Perplexity", "Midjourney", "Grammarly", "Jasper",
+    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
+    "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
+]);
+AlertInfo
+| where Timestamp > ago(180d)
+| where ServiceSource == "Microsoft Cloud App Security"
+    or ServiceSource == "Microsoft Defender for Cloud Apps"
+| join kind=inner (
+    AlertEvidence
+    | where Timestamp > ago(180d)
+    | where EntityType == "User" or EntityType == "CloudApplication"
+    | extend EvidenceDetail = case(
+        EntityType == "User", AccountUpn,
+        EntityType == "CloudApplication", tostring(AdditionalFields.AppName),
+        ""
+    )
+    | summarize
+        Users = make_set_if(EvidenceDetail, EntityType == "User"),
+        Apps  = make_set_if(EvidenceDetail, EntityType == "CloudApplication")
+        by AlertId
+) on AlertId
+| where Apps has_any (AIAppNames)
+| mv-expand UPN = Users to typeof(string)
+| mv-expand AppName = Apps to typeof(string)
+| where AppName has_any (AIAppNames)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| project Timestamp = format_datetime(Timestamp, "yyyy-MM-dd HH:mm:ss"),
+          YearMonth,
+          UPN = tolower(UPN),
+          AppName,
+          AlertType = Category,
+          Severity,
+          Description = Title
+| order by Timestamp asc
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B7 — ai_cloud_discovery.csv (PowerShell reshape)
+// ─────────────────────────────────────────────────────────────────────────────
+// This is NOT a KQL query — it's a PowerShell script to reshape the manual
+// Cloud Discovery export from the MDA portal.
+//
+// Steps:
+//   1. Go to https://security.microsoft.com → Cloud Apps → Cloud Discovery
+//   2. Click "Discovered Apps" → Filter: Category = "Generative AI"
+//   3. Set time range to last 90 days
+//   4. Click "Export" → download the CSV
+//   5. Run the PowerShell below to reshape it
+//
+// Output: ai_cloud_discovery.csv
+// Schema: AIDomain, AppCategory, YearMonth, RiskScore, UploadVolumeMB,
+//         DownloadVolumeMB, TransactionCount, DistinctUsers, SanctionStatus
+//
+// <powershell>
+// # Load the raw Cloud Discovery export
+// $rawPath = "DiscoveredApps_export.csv"  # ← rename to your downloaded file
+// $raw = Import-Csv $rawPath
+//
+// # Reshape to match expected schema
+// $reshaped = $raw | ForEach-Object {
+//     [PSCustomObject]@{
+//         AIDomain         = $_."App domain"
+//         AppCategory      = $_."Category"
+//         YearMonth        = (Get-Date).ToString("yyyy-MM")  # or parse from export
+//         RiskScore        = [int]$_."Score"
+//         UploadVolumeMB   = [math]::Round([double]($_."Upload (bytes)" ?? 0) / 1MB, 2)
+//         DownloadVolumeMB = [math]::Round([double]($_."Download (bytes)" ?? 0) / 1MB, 2)
+//         TransactionCount = [int]($_."Transactions" ?? 0)
+//         DistinctUsers    = [int]($_."Users" ?? 0)
+//         SanctionStatus   = $_."Tag" ?? "Untagged"
+//     }
+// }
+//
+// $reshaped | Export-Csv -NoTypeInformation -Encoding UTF8 ai_cloud_discovery.csv
+// Write-Host "Exported $($reshaped.Count) rows to ai_cloud_discovery.csv"
+//
+// # NOTE: The MDA export column names may vary by portal version.
+// # Common column name variants:
+// #   "App domain" or "Domain"
+// #   "Score" or "Risk score"
+// #   "Upload (bytes)" or "Upload traffic (Bytes)"
+// #   "Download (bytes)" or "Download traffic (Bytes)"
+// #   "Transactions" or "Total transactions"
+// #   "Users" or "Total users"
+// #   "Tag" or "Sanction status" or "App status"
+// # Adjust the property names in the script to match your export.
+// </powershell>
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION B8 — ai_mda_sessions.csv (MDA Session Intelligence)
+// ─────────────────────────────────────────────────────────────────────────────
+// Run in: Defender XDR → Advanced Hunting
+// Output: ai_mda_sessions.csv
+// Schema: Timestamp, YearMonth, UPN, AppName, ActionType, PolicyHit,
+//         PolicyAction, IPAddress, CountryCode, EventCount
+//
+// Requires: MDA + Conditional Access App Control policies configured
+// This query captures session-level DLP/policy enforcement actions.
+
+let AIAppNames = dynamic([
+    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
+    "Perplexity", "Midjourney", "Grammarly", "Jasper",
+    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
+    "Stability", "Hugging Face", "Copilot"
+]);
+CloudAppEvents
+| where Timestamp > ago(90d)
+| where Application has_any (AIAppNames)
+| where ActionType in (
+    "FileUploaded", "FileDownloaded", "FilePreviewed",
+    "PasteAction", "PrintAction", "CopyAction",
+    "SessionLogon", "SessionLogoff",
+    "AppAccessBlocked", "FileBlocked", "UploadBlocked"
+)
+| extend UPN = tolower(AccountObjectId)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| extend PolicyHit = tostring(RawEventData.PolicyName)
+| extend PolicyAction = case(
+    ActionType has "Blocked", "Block",
+    ActionType has "Monitor", "Monitor",
+    isnotempty(PolicyHit), "Alert",
+    "Allow"
+)
+| extend IPAddress = tostring(IPAddress)
+| extend CountryCode = tostring(RawEventData.CountryCode)
+| summarize
+    EventCount = count(),
+    Timestamp = min(Timestamp)
+    by YearMonth, UPN,
+       AppName = Application,
+       ActionType,
+       PolicyHit,
+       PolicyAction,
+       IPAddress,
+       CountryCode
+| extend Timestamp = format_datetime(Timestamp, "yyyy-MM-dd HH:mm:ss")
+| project Timestamp, YearMonth, UPN, AppName, ActionType, PolicyHit,
+          PolicyAction, IPAddress, CountryCode, EventCount
+| order by Timestamp asc
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// END OF QUERY PACK
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// After collecting all CSVs, place them in a single folder and open the PBIT.
+// When prompted for AI_Data_Folder_Path, enter your folder path with trailing
+// slash (e.g. C:\AI_Usage_Data\ or /Users/yourname/AI_Usage_Data/).
+//
+// See INSTRUCTIONS_v26.md for the complete setup guide.
+// ═══════════════════════════════════════════════════════════════════════════════
