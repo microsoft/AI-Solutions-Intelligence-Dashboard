@@ -2,9 +2,11 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/version-v26%20Unified-blue)
+![Current Version](https://img.shields.io/badge/version-v26.1%20Validated-blue)
 
 **A single Power BI report that delivers a complete, defensible view of AI usage across your Microsoft 365 tenant — Copilot adoption, shadow AI, OAuth risk, off-hours/geo anomalies, and (optionally) MDA App Governance & Cloud Discovery — all in one PBIT.**
+
+> **v26.1 — June 23, 2026:** All KQL queries in `kql_queries_v22_E5V3.kql` have been live-tested against a real tenant. Eight bugs fixed across B2, B4, B6, and B8 (UPN resolution, schema portability between Sentinel and native Defender XDR, KQL syntax errors). B3 and B5 validated clean. See the [query pack changelog](kql_queries_v22_E5V3.kql) for details.
 
 ### 📥 [Click Here to Download All Files](https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip)
 

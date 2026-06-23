@@ -70,6 +70,8 @@ Save the response as `ai_copilot_usage_graph.csv`.
 
 Defender XDR → Advanced Hunting → paste KQL Section B2 → Run → Export CSV.
 
+> **Query validated June 2026.** The corrected query filters exclusively to AI app names via `Application has_any(AIAppNames)` and resolves UPNs via `IdentityInfo`. Some rows may show object IDs instead of UPNs (guest/service accounts with no IdentityInfo entry) — those rows contribute to totals but won't join department filters. `EstimatedPrompts` will be 0 for Microsoft 365 Copilot rows; use `ai_copilot_usage_graph.csv` (Section A2) for authoritative Copilot prompt counts.
+
 ### 1.4  ai_oauth_consents.csv  (Entra Audit Logs)
 
 Run the PowerShell block in KQL Section A3 (uses Graph `Get-MgAuditLogDirectoryAudit`) → outputs `ai_oauth_consents.csv`.
@@ -85,6 +87,10 @@ Defender XDR → Advanced Hunting → paste KQL Section B3 → Run → Export CS
 ### 1.7  ai_offhours_geo.csv  (AADSignInEventsBeta)
 
 Defender XDR → Advanced Hunting → paste KQL Section B4 → Run → Export CSV.
+
+> **Schema note (validated June 2026):** The country column differs by environment:
+> - **Sentinel Advanced Hunting workspace** → column is `Country` (string) — query uses this by default.
+> - **Native Defender XDR Advanced Hunting** → replace `coalesce(Country, "Unknown")` with `coalesce(CountryCode, "Unknown")` in the B4 query.
 
 ### 1.8  ai_solutions_catalog.csv  (hand-maintained)
 
@@ -132,6 +138,8 @@ The three MDA pages (11, 12, 13) will display the yellow "MDA Required" callout 
 **Prereq:** Defender for Cloud Apps + App Governance enabled.
 
 Defender XDR → Advanced Hunting → paste KQL Section **B6** → Run → Export CSV.
+
+> **Validation note:** If B6 returns 0 rows with no errors, your tenant has `AlertInfo` available but no MDA App Governance alerts (common when `ServiceSource` shows "Microsoft Defender XDR" instead of "Microsoft Defender for Cloud Apps"). Use the stub CSV and the MDA page will display the yellow callout. No action needed until MDA App Governance is activated.
 
 ### 3.2  ai_cloud_discovery.csv  (Cloud Discovery — Shadow AI catalog)
 

@@ -1,13 +1,33 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // AI Solutions Intelligence Dashboard — Data Collection Query Pack
-// Version: v26 Unified (aligned with May 2026 PBIT)
+// Version: v26.1 — Live-tenant validated (June 23, 2026)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // This file contains all PowerShell scripts and KQL (Kusto Query Language)
 // queries needed to populate the dashboard's 12 CSV data files.
 //
+// v26.1 changes vs. original v26 (all validated against a live tenant):
+//   B2  — Removed over-broad ActionType OR filter (was pulling SharePoint/Teams/
+//          OneDrive); changed AISolution fallback from `Application` to `""`;
+//          replaced AccountObjectId with IdentityInfo UPN lookup.
+//          Performance: 30 s / Critical → 4 s / Medium.
+//   B4  — Fixed `LocationDetails.countryOrRegion` (column doesn't exist in either
+//          Sentinel or native Defender XDR schemas) → use direct `Country` column;
+//          fixed `dynamic([PrimaryCountry])` → `pack_array(PrimaryCountry)` (the
+//          original produced a parse error and empty anomaly results).
+//   B6  — Fixed `AdditionalFields.AppName` (Sentinel stores AdditionalFields as
+//          string, not dynamic) → `parse_json(tostring(AdditionalFields)).AppName`.
+//   B8  — Replaced AccountObjectId with IdentityInfo UPN lookup (same as B2).
+//   B3, B5 — No changes. Validated clean.
+//
 // Section A = PowerShell / Graph scripts (run in PowerShell 7+)
 // Section B = KQL queries (run in Defender XDR → Advanced Hunting)
+//
+// NOTE ON ENVIRONMENT: Queries are validated against Microsoft Sentinel's
+// Advanced Hunting workspace. Column name differences vs. native Defender XDR:
+//   AADSignInEventsBeta.Country     (Sentinel) vs. CountryCode (native Def XDR)
+//   AlertEvidence.AdditionalFields  stored as string in Sentinel, dynamic in XDR
+//   See per-section comments for the relevant switch if running in native XDR.
 //
 // IMPORTANT: Each query's output columns must EXACTLY match the schemas below.
 //            Do NOT rename columns — Power Query expects these exact headers.
@@ -379,33 +399,41 @@
 // Schema: UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
 //         DistinctDevices, Category, RiskTier
 //
-// This query identifies AI tool usage from CloudAppEvents, mapping app names
-// to the solutions catalog. Adjust the app-name matching for your environment.
+// This query identifies AI tool usage from CloudAppEvents, mapping MDA-connected
+// app names to the solutions catalog.
+//
+// FIXES applied (validated June 2026 against live tenant):
+//   1. Initial filter changed to Application has_any (AIAppNames) only.
+//      The original ActionType OR arm captured all SharePoint/Teams/OneDrive
+//      traffic, polluting results with ~1,400+ non-AI rows.
+//      RawEventData has_any() removed — caused 100% resource exhaustion (30s+).
+//   2. AISolution case() fallback changed from `Application` to `""` so
+//      unrecognised apps are dropped by the isnotempty() filter below.
+//   3. UPN resolved via IdentityInfo lookup. AccountObjectId (Entra GUID) is
+//      used as fallback when IdentityInfo has no match (guest/service accounts).
+//      Rows that fall back to GUID will not join EntraUsers in the PBIT but
+//      will still contribute to total session counts — this is expected.
+//
+// NOTE: EstimatedPrompts will be 0 for Microsoft 365 Copilot rows — MDA does
+//       not surface MessageSent/SearchPerformed for in-app Copilot surfaces.
+//       Real prompt counts come from ai_copilot_usage_graph.csv (Section A2).
+//       EstimatedPrompts is most useful for third-party AI apps (ChatGPT, Claude)
+//       when they are reverse-proxied through MDA Conditional Access App Control.
 
-let AIDomains = dynamic([
-    "copilot.microsoft.com", "copilot.cloud.microsoft",
-    "chat.openai.com", "chatgpt.com", "api.openai.com",
-    "claude.ai", "api.anthropic.com",
-    "gemini.google.com", "bard.google.com",
-    "perplexity.ai",
-    "midjourney.com",
-    "github.com/copilot", "copilot.github.com",
-    "bing.com/chat",
-    "huggingface.co",
-    "stability.ai",
-    "jasper.ai",
-    "grammarly.com",
-    "notion.so",
-    "firefly.adobe.com",
-    "app.synthesia.io",
-    "runwayml.com",
-    "canva.com"
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot", "Bing Chat",
+    "ChatGPT", "OpenAI", "Claude", "Anthropic",
+    "Gemini", "Bard", "Perplexity", "Midjourney",
+    "Grammarly", "Notion", "Jasper", "Adobe Firefly",
+    "Canva", "Synthesia", "Runway", "Stability", "Hugging Face"
 ]);
+// Resolve Entra ObjectId → UPN. Rows with no IdentityInfo match fall back to
+// the raw ObjectId GUID — those rows won't join EntraUsers in Power BI.
+let UserUpns = IdentityInfo
+    | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
 | where Timestamp > ago(180d)
-| where ActionType in ("AppAccessedViaAPI", "AppUsed", "TabletAccessed", "FileUploaded", "FileDownloaded", "MessageSent", "SearchPerformed")
-    or Application has_any (AIDomains)
-    or RawEventData has_any (AIDomains)
+| where Application has_any (AIAppNames)
 | extend AISolution = case(
     Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
     Application has "GitHub Copilot", "GitHub Copilot",
@@ -417,17 +445,18 @@ CloudAppEvents
     Application has "Bing Chat" or Application has "Bing Copilot", "Bing Chat Enterprise",
     Application has "Grammarly", "Grammarly",
     Application has "Notion", "Notion AI",
-    Application has "Firefly" or Application has "Adobe", "Adobe Firefly",
+    Application has "Firefly" or Application has "Adobe Firefly", "Adobe Firefly",
     Application has "Jasper", "Jasper",
     Application has "Synthesia", "Synthesia",
     Application has "Runway", "Runway",
     Application has "Hugging Face", "Hugging Face",
     Application has "Canva", "Canva AI",
     Application has "Stability", "Stability AI",
-    Application // fallback: use raw app name
+    ""  // empty fallback — unrecognised apps dropped by isnotempty() below
 )
 | where isnotempty(AISolution)
-| extend UPN = tolower(AccountObjectId)
+| lookup kind=leftouter UserUpns on AccountObjectId
+| extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
 | summarize
     Sessions = count(),
@@ -449,7 +478,8 @@ CloudAppEvents
     AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
     "Unsanctioned"
 )
-| project UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier
+| project UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
+          DistinctDevices, Category, RiskTier
 | order by UPN asc, YearMonth asc
 
 
@@ -549,18 +579,27 @@ AIVisits
 // Schema: UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
 //         DistinctCountries, AnomalousCountryCount, AnomalousCountries
 //
-// Off-hours defined as before 7 AM or after 7 PM local time (UTC used here —
-// adjust for your org's primary timezone if needed).
-// Anomalous country = any country that appears in <5% of a user's sign-ins.
+// Off-hours defined as before 7 AM or after 7 PM UTC — adjust for your org's
+// primary timezone if needed.
+// Anomalous country = any country other than the user's most frequent sign-in country.
+//
+// FIXES applied (validated June 2026 against live tenant):
+//   1. Country field: replaced tostring(LocationDetails.countryOrRegion) with
+//      coalesce(Country, "Unknown"). The LocationDetails dot-notation fails in
+//      both native Defender XDR and Sentinel schemas.
+//      Schema note:
+//        Sentinel Advanced Hunting workspace  → column is "Country" (string)
+//        Native Defender XDR Advanced Hunting → column is "CountryCode" (2-letter ISO)
+//      This query uses "Country" (Sentinel). If running in native Defender XDR,
+//      replace: | extend Country = coalesce(Country, "Unknown")
+//          with: | extend Country = coalesce(CountryCode, "Unknown")
+//   2. AnomalousCountries: replaced dynamic([PrimaryCountry]) with
+//      pack_array(PrimaryCountry). dynamic([...]) only accepts literals —
+//      column references inside dynamic() cause a parse error.
+//      Confirmed fix: row with DistinctCountries=2 now correctly shows
+//      AnomalousCountryCount=1 and AnomalousCountries="AU".
+//   3. Removed unused AIDomains variable (AIAppNames is sufficient).
 
-let AIDomains = dynamic([
-    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
-    "claude.ai", "gemini.google.com", "perplexity.ai",
-    "midjourney.com", "huggingface.co", "grammarly.com",
-    "notion.so", "jasper.ai", "stability.ai",
-    "firefly.adobe.com", "canva.com", "runwayml.com",
-    "app.synthesia.io"
-]);
 let AIAppNames = dynamic([
     "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
     "ChatGPT", "OpenAI", "Claude", "Anthropic",
@@ -578,7 +617,7 @@ let AISignIns =
     | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
     | extend HourOfDay = hourofday(Timestamp)
     | extend IsOffHours = iff(HourOfDay < 7 or HourOfDay >= 19, 1, 0)
-    | extend Country = tostring(LocationDetails.countryOrRegion)
+    | extend Country = coalesce(Country, "Unknown")  // FIX 1: use direct column
     | project UPN, YearMonth, Timestamp, IsOffHours, Country;
 // Step 2: Compute per-user primary country (for anomaly detection)
 let UserPrimaryCountry =
@@ -596,7 +635,7 @@ AISignIns
     by UPN, YearMonth
 | extend OffHoursPct = round(todouble(OffHoursSessions) / todouble(TotalSessions), 4)
 | join kind=leftouter UserPrimaryCountry on UPN
-| extend AnomalousCountries = set_difference(Countries, dynamic([PrimaryCountry]))
+| extend AnomalousCountries = set_difference(Countries, pack_array(PrimaryCountry))  // FIX 2
 | extend AnomalousCountryCount = array_length(AnomalousCountries)
 | extend AnomalousCountries = iff(AnomalousCountryCount > 0,
     strcat_array(AnomalousCountries, "; "), "")
@@ -668,9 +707,20 @@ DeviceNetworkEvents
 // Schema: Timestamp, YearMonth, UPN, AppName, AlertType, Severity, Description
 //
 // Requires: Microsoft Defender for Cloud Apps + App Governance enabled
-// NOTE: If "AlertInfo" or "AlertEvidence" tables are not available, App
-//       Governance is not enabled in your tenant. See:
-//       https://learn.microsoft.com/defender-cloud-apps/app-governance-manage-app-governance
+// NOTE: If AlertInfo/AlertEvidence tables exist but return 0 rows, it means
+//       your tenant has Defender XDR alerts but NOT MDA App Governance alerts.
+//       The ServiceSource filter below is correct — only MDA-sourced alerts are
+//       relevant for OAuth/app anomaly detection.
+//       Tenants without MDA App Governance: use the header-only stub CSV.
+//       See: https://learn.microsoft.com/defender-cloud-apps/app-governance-manage-app-governance
+//
+// FIXES applied (validated June 2026 against live tenant):
+//   1. AdditionalFields.AppName: Sentinel workspace stores AdditionalFields as
+//      type string, not dynamic. Wrapped with parse_json(tostring(...)) to
+//      support both Sentinel and native Defender XDR Advanced Hunting.
+//      Sentinel:        tostring(parse_json(tostring(AdditionalFields)).AppName)
+//      Native Def XDR:  tostring(AdditionalFields.AppName)  [also works]
+//   2. Validated: query runs cleanly with 0 rows on non-MDA tenants (correct).
 
 let AIAppNames = dynamic([
     "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
@@ -688,7 +738,8 @@ AlertInfo
     | where EntityType == "User" or EntityType == "CloudApplication"
     | extend EvidenceDetail = case(
         EntityType == "User", AccountUpn,
-        EntityType == "CloudApplication", tostring(AdditionalFields.AppName),
+        EntityType == "CloudApplication",
+            tostring(parse_json(tostring(AdditionalFields)).AppName),  // FIX 1
         ""
     )
     | summarize
@@ -774,6 +825,16 @@ AlertInfo
 //
 // Requires: MDA + Conditional Access App Control policies configured
 // This query captures session-level DLP/policy enforcement actions.
+// Zero rows = MDA CAAC not configured for AI apps (expected — use stub CSV).
+//
+// FIXES applied (validated June 2026 against live tenant):
+//   1. UPN resolved via IdentityInfo lookup (same fix as B2).
+//      AccountObjectId is an Entra GUID, not a UPN. Rows with no IdentityInfo
+//      match fall back to the raw GUID — those rows won't join EntraUsers.
+//   2. Validated: RawEventData.PolicyName and RawEventData.CountryCode resolve
+//      correctly in both Sentinel and native Defender XDR (RawEventData is
+//      stored as dynamic in both schemas — no parse_json() needed here).
+//   3. Validated: 0 rows on non-MDA tenants is correct behavior.
 
 let AIAppNames = dynamic([
     "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
@@ -781,6 +842,9 @@ let AIAppNames = dynamic([
     "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
     "Stability", "Hugging Face", "Copilot"
 ]);
+// Resolve Entra ObjectId → UPN (same pattern as B2)
+let UserUpns = IdentityInfo
+    | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
 | where Timestamp > ago(90d)
 | where Application has_any (AIAppNames)
@@ -790,7 +854,8 @@ CloudAppEvents
     "SessionLogon", "SessionLogoff",
     "AppAccessBlocked", "FileBlocked", "UploadBlocked"
 )
-| extend UPN = tolower(AccountObjectId)
+| lookup kind=leftouter UserUpns on AccountObjectId          // FIX 1
+| extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
 | extend PolicyHit = tostring(RawEventData.PolicyName)
 | extend PolicyAction = case(
