@@ -1,4 +1,4 @@
-# AI Usage Dashboard v26 — Setup Instructions
+# AI Solutions Intelligence Dashboard v26.1 — Setup Instructions
 
 **One report. Two paths.** Choose the path that matches your tenant.
 
@@ -8,6 +8,33 @@
 | **Path B — Full MDA** | M365 E5 + MDE Plan 2 + MDA + App Governance | All 12 CSVs | 0 |
 
 The PBIT is identical for both paths — the difference is just what's in the data folder.
+
+---
+
+## Quick Reference — What tool does each CSV need?
+
+| Step | CSV file | Tool | Requires |
+|---|---|---|---|
+| 1.1 | `EntraUsers.csv` | 💻 PowerShell (Microsoft Graph) | Graph API |
+| 1.2 | `ai_copilot_usage_graph.csv` | 💻 PowerShell (Purview Audit) or 🌐 Graph API | Purview Audit reader |
+| **1.3** | **`ai_activity_sessions.csv`** | **🔍 Defender Advanced Hunting** | **MDE / MDA connected** |
+| 1.4 | `ai_oauth_consents.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
+| 1.5 | `ai_sso_signins.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
+| **1.6** | **`ai_file_proximity.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
+| **1.7** | **`ai_offhours_geo.csv`** | **🔍 Defender Advanced Hunting** | **AADSignInEventsBeta** |
+| 1.8 | `ai_solutions_catalog.csv` | 📋 Excel / text editor | — |
+| **1.9** | **`ai_client_channel.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
+| **3.1** | **`ai_appgov_alerts.csv`** | **🔍 Defender Advanced Hunting** | **MDA App Governance** |
+| 3.2 | `ai_cloud_discovery.csv` | 🛡️ MDA Portal + PowerShell | MDA Cloud Discovery |
+| **3.3** | **`ai_mda_sessions.csv`** | **🔍 Defender Advanced Hunting** | **MDA CAAC** |
+
+> **🔍 How to run an Advanced Hunting query:**
+> 1. Go to **https://security.microsoft.com** → **Hunting** → **Advanced Hunting**
+> 2. Click **+ New query**
+> 3. Paste the query from the step below
+> 4. Click **Run query**
+> 5. Click **Export** → **Export to CSV**
+> 6. Rename the downloaded file to match the expected filename
 
 ---
 
@@ -66,11 +93,79 @@ Save the response as `ai_copilot_usage_graph.csv`.
 >
 > Why Purview over Defender CloudAppEvents? CloudAppEvents only captures the BizChat surface — it misses in-app Copilot in Word/Excel/PPT/Outlook/Teams. Purview is the only complete source.
 
-### 1.3  ai_activity_sessions.csv  (Defender CloudAppEvents)
+### 1.3  🔍 ai_activity_sessions.csv  (Defender Advanced Hunting — CloudAppEvents)
 
-Defender XDR → Advanced Hunting → paste KQL Section B2 → Run → Export CSV.
+**Output file:** `ai_activity_sessions.csv`  
+**Schema:** `UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier`
 
-> **Query validated June 2026.** The corrected query filters exclusively to AI app names via `Application has_any(AIAppNames)` and resolves UPNs via `IdentityInfo`. Some rows may show object IDs instead of UPNs (guest/service accounts with no IdentityInfo entry) — those rows contribute to totals but won't join department filters. `EstimatedPrompts` will be 0 for Microsoft 365 Copilot rows; use `ai_copilot_usage_graph.csv` (Section A2) for authoritative Copilot prompt counts.
+<details>
+<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+
+```kql
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot", "Bing Chat",
+    "ChatGPT", "OpenAI", "Claude", "Anthropic",
+    "Gemini", "Bard", "Perplexity", "Midjourney",
+    "Grammarly", "Notion", "Jasper", "Adobe Firefly",
+    "Canva", "Synthesia", "Runway", "Stability", "Hugging Face"
+]);
+let UserUpns = IdentityInfo
+    | summarize take_any(AccountUpn) by AccountObjectId;
+CloudAppEvents
+| where Timestamp > ago(180d)
+| where Application has_any (AIAppNames)
+| extend AISolution = case(
+    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
+    Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
+    Application has "Claude" or Application has "Anthropic", "Claude",
+    Application has "Gemini" or Application has "Bard", "Gemini",
+    Application has "Perplexity", "Perplexity",
+    Application has "Midjourney", "Midjourney",
+    Application has "Bing Chat" or Application has "Bing Copilot", "Bing Chat Enterprise",
+    Application has "Grammarly", "Grammarly",
+    Application has "Notion", "Notion AI",
+    Application has "Firefly" or Application has "Adobe Firefly", "Adobe Firefly",
+    Application has "Jasper", "Jasper",
+    Application has "Synthesia", "Synthesia",
+    Application has "Runway", "Runway",
+    Application has "Hugging Face", "Hugging Face",
+    Application has "Canva", "Canva AI",
+    Application has "Stability", "Stability AI",
+    ""
+)
+| where isnotempty(AISolution)
+| lookup kind=leftouter UserUpns on AccountObjectId
+| extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize
+    Sessions = count(),
+    ActiveDays = dcount(bin(Timestamp, 1d)),
+    EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
+    DistinctDevices = dcount(DeviceType)
+    by UPN, AISolution, YearMonth
+| extend Category = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
+    AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
+    AISolution in ("Grammarly", "Jasper"), "Writing",
+    AISolution in ("Notion AI", "Canva AI"), "Productivity",
+    AISolution in ("Synthesia", "Runway"), "Video",
+    "Other"
+)
+| extend RiskTier = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
+    "Unsanctioned"
+)
+| project UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
+          DistinctDevices, Category, RiskTier
+| order by UPN asc, YearMonth asc
+```
+
+</details>
+
+> **Note:** `EstimatedPrompts` will be 0 for Microsoft 365 Copilot rows — use `ai_copilot_usage_graph.csv` (Step 1.2) for authoritative Copilot prompt counts. Some UPN values may appear as object IDs (guest/service accounts) — those rows contribute to totals but won't filter by department.
 
 ### 1.4  ai_oauth_consents.csv  (Entra Audit Logs)
 
@@ -80,17 +175,142 @@ Run the PowerShell block in KQL Section A3 (uses Graph `Get-MgAuditLogDirectoryA
 
 Run the PowerShell block in KQL Section A4 (uses Graph `Get-MgAuditLogSignIn`) → outputs `ai_sso_signins.csv`.
 
-### 1.6  ai_file_proximity.csv  (MDE Plan 2)
+### 1.6  🔍 ai_file_proximity.csv  (Defender Advanced Hunting — DeviceFileEvents + DeviceNetworkEvents)
 
-Defender XDR → Advanced Hunting → paste KQL Section B3 → Run → Export CSV.
+**Requires:** MDE Plan 2 (both `DeviceFileEvents` and `DeviceNetworkEvents` tables must be available)  
+**Output file:** `ai_file_proximity.csv`  
+**Schema:** `Timestamp, UPN, AISolution, YearMonth, FileName, FolderCategory, FolderPath, SecondsToAI, NameMatchesSensitivePattern, FolderMatchesSensitive`
 
-### 1.7  ai_offhours_geo.csv  (AADSignInEventsBeta)
+<details>
+<summary><strong>📋 Click to expand KQL query (validated June 2026)</strong></summary>
 
-Defender XDR → Advanced Hunting → paste KQL Section B4 → Run → Export CSV.
+```kql
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
+    "claude.ai", "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "midjourney.com", "huggingface.co",
+    "stability.ai", "jasper.ai", "grammarly.com", "notion.so",
+    "firefly.adobe.com", "runwayml.com", "canva.com",
+    "app.synthesia.io"
+]);
+let SensitiveNamePatterns = dynamic([
+    "confidential", "secret", "password", "credential", "private",
+    "restricted", "internal", "draft", "salary", "ssn", "pii",
+    "financial", "budget", "forecast", "strategy", "merger",
+    "acquisition", "termination", "layoff", "patent"
+]);
+let SensitiveFolderPatterns = dynamic([
+    "confidential", "restricted", "hr", "legal", "finance",
+    "executive", "board", "compliance", "audit", "security"
+]);
+let AIVisits =
+    DeviceNetworkEvents
+    | where Timestamp > ago(90d)
+    | where ActionType == "ConnectionSuccess"
+    | where RemoteUrl has_any (AIDomains)
+    | extend AISolution = case(
+        RemoteUrl has "copilot.microsoft.com", "Microsoft 365 Copilot",
+        RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "ChatGPT",
+        RemoteUrl has "claude.ai", "Claude",
+        RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "Gemini",
+        RemoteUrl has "perplexity.ai", "Perplexity",
+        RemoteUrl has "midjourney.com", "Midjourney",
+        RemoteUrl has "huggingface.co", "Hugging Face",
+        RemoteUrl has "stability.ai", "Stability AI",
+        RemoteUrl has "jasper.ai", "Jasper",
+        RemoteUrl has "grammarly.com", "Grammarly",
+        RemoteUrl has "notion.so", "Notion AI",
+        RemoteUrl has "firefly.adobe.com", "Adobe Firefly",
+        RemoteUrl has "runwayml.com", "Runway",
+        RemoteUrl has "canva.com", "Canva AI",
+        RemoteUrl has "app.synthesia.io", "Synthesia",
+        "Other AI"
+    )
+    | project AITimestamp = Timestamp, DeviceId, AISolution;
+let FileAccess =
+    DeviceFileEvents
+    | where Timestamp > ago(90d)
+    | where ActionType in ("FileCreated", "FileModified", "FileRenamed", "FileCopied")
+    | where FileName !endswith ".tmp" and FileName !endswith ".log"
+    | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
+              InitiatingProcessAccountUpn;
+AIVisits
+| join kind=inner FileAccess on DeviceId
+| where FileTimestamp between (AITimestamp .. (AITimestamp + 5m))
+| extend SecondsToAI = datetime_diff("second", FileTimestamp, AITimestamp)
+| extend UPN = tolower(InitiatingProcessAccountUpn)
+| extend YearMonth = format_datetime(AITimestamp, "yyyy-MM")
+| extend FolderCategory = case(
+    FolderPath has "Desktop", "Desktop",
+    FolderPath has "Downloads", "Downloads",
+    FolderPath has "Documents", "Documents",
+    FolderPath has "OneDrive", "OneDrive",
+    FolderPath has "SharePoint", "SharePoint",
+    "Other"
+)
+| extend NameMatchesSensitivePattern = iff(FileName has_any (SensitiveNamePatterns), 1, 0)
+| extend FolderMatchesSensitive = iff(FolderPath has_any (SensitiveFolderPatterns), 1, 0)
+| project Timestamp = AITimestamp, UPN, AISolution, YearMonth, FileName,
+          FolderCategory, FolderPath, SecondsToAI,
+          NameMatchesSensitivePattern, FolderMatchesSensitive
+| order by Timestamp asc
+```
 
-> **Schema note (validated June 2026):** The country column differs by environment:
-> - **Sentinel Advanced Hunting workspace** → column is `Country` (string) — query uses this by default.
-> - **Native Defender XDR Advanced Hunting** → replace `coalesce(Country, "Unknown")` with `coalesce(CountryCode, "Unknown")` in the B4 query.
+</details>
+
+### 1.7  🔍 ai_offhours_geo.csv  (Defender Advanced Hunting — AADSignInEventsBeta)
+
+**Output file:** `ai_offhours_geo.csv`  
+**Schema:** `UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct, DistinctCountries, AnomalousCountryCount, AnomalousCountries`
+
+<details>
+<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+
+```kql
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
+    "ChatGPT", "OpenAI", "Claude", "Anthropic",
+    "Gemini", "Perplexity", "Midjourney", "Grammarly",
+    "Notion", "Jasper", "Adobe Firefly", "Canva"
+]);
+let AISignIns =
+    AADSignInEventsBeta
+    | where Timestamp > ago(90d)
+    | where ErrorCode == 0
+    | where Application has_any (AIAppNames)
+        or ResourceDisplayName has_any (AIAppNames)
+    | extend UPN = tolower(AccountUpn)
+    | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+    | extend HourOfDay = hourofday(Timestamp)
+    | extend IsOffHours = iff(HourOfDay < 7 or HourOfDay >= 19, 1, 0)
+    | extend Country = coalesce(Country, "Unknown")
+    | project UPN, YearMonth, Timestamp, IsOffHours, Country;
+let UserPrimaryCountry =
+    AISignIns
+    | summarize CountryCount = count() by UPN, Country
+    | summarize TotalEvents = sum(CountryCount), arg_max(CountryCount, Country) by UPN
+    | project UPN, PrimaryCountry = Country;
+AISignIns
+| summarize
+    TotalSessions = count(),
+    OffHoursSessions = countif(IsOffHours == 1),
+    DistinctCountries = dcount(Country),
+    Countries = make_set(Country)
+    by UPN, YearMonth
+| extend OffHoursPct = round(todouble(OffHoursSessions) / todouble(TotalSessions), 4)
+| join kind=leftouter UserPrimaryCountry on UPN
+| extend AnomalousCountries = set_difference(Countries, pack_array(PrimaryCountry))
+| extend AnomalousCountryCount = array_length(AnomalousCountries)
+| extend AnomalousCountries = iff(AnomalousCountryCount > 0,
+    strcat_array(AnomalousCountries, "; "), "")
+| project UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
+          DistinctCountries, AnomalousCountryCount, AnomalousCountries
+| order by UPN asc, YearMonth asc
+```
+
+</details>
+
+> **Schema note:** The country column name differs by environment. This query uses `Country` (correct for Sentinel workspaces). If running in **native Defender XDR Advanced Hunting**, change `coalesce(Country, "Unknown")` to `coalesce(CountryCode, "Unknown")`.
 
 ### 1.8  ai_solutions_catalog.csv  (hand-maintained)
 
@@ -100,9 +320,64 @@ Open in Excel. Schema: `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,
 
 Seed example in KQL Section A5.
 
-### 1.9  ai_client_channel.csv  (Browser/Desktop/API split)
+### 1.9  🔍 ai_client_channel.csv  (Defender Advanced Hunting — DeviceNetworkEvents)
 
-Defender XDR → Advanced Hunting → paste KQL Section B5 → Run → Export CSV.
+**Output file:** `ai_client_channel.csv`  
+**Schema:** `AISite, Channel, YearMonth, EventCount`
+
+<details>
+<summary><strong>📋 Click to expand KQL query (validated June 2026)</strong></summary>
+
+```kql
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "copilot.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com",
+    "claude.ai", "api.anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "midjourney.com",
+    "huggingface.co", "stability.ai", "jasper.ai",
+    "grammarly.com", "notion.so", "firefly.adobe.com",
+    "runwayml.com", "canva.com", "app.synthesia.io"
+]);
+DeviceNetworkEvents
+| where Timestamp > ago(90d)
+| where ActionType == "ConnectionSuccess"
+| where RemoteUrl has_any (AIDomains)
+| extend AISite = case(
+    RemoteUrl has "copilot.microsoft.com" or RemoteUrl has "copilot.cloud.microsoft", "copilot.microsoft.com",
+    RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "chatgpt.com",
+    RemoteUrl has "api.openai.com", "api.openai.com",
+    RemoteUrl has "claude.ai", "claude.ai",
+    RemoteUrl has "api.anthropic.com", "api.anthropic.com",
+    RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "gemini.google.com",
+    RemoteUrl has "perplexity.ai", "perplexity.ai",
+    RemoteUrl has "midjourney.com", "midjourney.com",
+    RemoteUrl has "huggingface.co", "huggingface.co",
+    RemoteUrl has "stability.ai", "stability.ai",
+    RemoteUrl has "jasper.ai", "jasper.ai",
+    RemoteUrl has "grammarly.com", "grammarly.com",
+    RemoteUrl has "notion.so", "notion.so",
+    RemoteUrl has "firefly.adobe.com", "firefly.adobe.com",
+    RemoteUrl has "runwayml.com", "runwayml.com",
+    RemoteUrl has "canva.com", "canva.com",
+    RemoteUrl has "app.synthesia.io", "app.synthesia.io",
+    RemoteUrl
+)
+| extend Channel = case(
+    InitiatingProcessFileName has_any ("chrome.exe", "msedge.exe", "firefox.exe",
+        "brave.exe", "safari", "opera.exe", "iexplore.exe",
+        "Chrome", "Safari", "Firefox"), "Browser",
+    InitiatingProcessFileName has_any ("python", "node", "java", "curl",
+        "powershell", "pwsh", "cmd.exe", "bash",
+        "dotnet", "go"), "API",
+    "Desktop"
+)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize EventCount = count() by AISite, Channel, YearMonth
+| order by AISite asc, YearMonth asc, Channel asc
+```
+
+</details>
 
 ---
 
@@ -133,13 +408,59 @@ The three MDA pages (11, 12, 13) will display the yellow "MDA Required" callout 
 
 ## Step 3 — Path B: Full MDA (populate the 3 extra CSVs)
 
-### 3.1  ai_appgov_alerts.csv  (App Governance ML alerts)
+### 3.1  🔍 ai_appgov_alerts.csv  (Defender Advanced Hunting — AlertInfo + AlertEvidence)
 
-**Prereq:** Defender for Cloud Apps + App Governance enabled.
+**Requires:** Microsoft Defender for Cloud Apps + App Governance enabled  
+**Output file:** `ai_appgov_alerts.csv`  
+**Schema:** `Timestamp, YearMonth, UPN, AppName, AlertType, Severity, Description`
 
-Defender XDR → Advanced Hunting → paste KQL Section **B6** → Run → Export CSV.
+<details>
+<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
 
-> **Validation note:** If B6 returns 0 rows with no errors, your tenant has `AlertInfo` available but no MDA App Governance alerts (common when `ServiceSource` shows "Microsoft Defender XDR" instead of "Microsoft Defender for Cloud Apps"). Use the stub CSV and the MDA page will display the yellow callout. No action needed until MDA App Governance is activated.
+```kql
+let AIAppNames = dynamic([
+    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
+    "Perplexity", "Midjourney", "Grammarly", "Jasper",
+    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
+    "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
+]);
+AlertInfo
+| where Timestamp > ago(180d)
+| where ServiceSource == "Microsoft Cloud App Security"
+    or ServiceSource == "Microsoft Defender for Cloud Apps"
+| join kind=inner (
+    AlertEvidence
+    | where Timestamp > ago(180d)
+    | where EntityType == "User" or EntityType == "CloudApplication"
+    | extend EvidenceDetail = case(
+        EntityType == "User", AccountUpn,
+        EntityType == "CloudApplication",
+            tostring(parse_json(tostring(AdditionalFields)).AppName),
+        ""
+    )
+    | summarize
+        Users = make_set_if(EvidenceDetail, EntityType == "User"),
+        Apps  = make_set_if(EvidenceDetail, EntityType == "CloudApplication")
+        by AlertId
+) on AlertId
+| where Apps has_any (AIAppNames)
+| mv-expand UPN = Users to typeof(string)
+| mv-expand AppName = Apps to typeof(string)
+| where AppName has_any (AIAppNames)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| project Timestamp = format_datetime(Timestamp, "yyyy-MM-dd HH:mm:ss"),
+          YearMonth,
+          UPN = tolower(UPN),
+          AppName,
+          AlertType = Category,
+          Severity,
+          Description = Title
+| order by Timestamp asc
+```
+
+</details>
+
+> **Expected result if MDA App Governance is not active:** Query runs cleanly but returns **0 rows** — this is correct. Your `ServiceSource` will show "Microsoft Defender XDR" instead of "Microsoft Defender for Cloud Apps". Use the header-only stub CSV (Step 2) and the MDA page will display the yellow callout overlay.
 
 ### 3.2  ai_cloud_discovery.csv  (Cloud Discovery — Shadow AI catalog)
 
@@ -151,11 +472,65 @@ Defender XDR → Advanced Hunting → paste KQL Section **B6** → Run → Expor
 4. **Export** → CSV
 5. Run the PowerShell pivot in KQL Section **B7** to reshape to the expected schema.
 
-### 3.3  ai_mda_sessions.csv  (Conditional Access App Control sessions)
+### 3.3  🔍 ai_mda_sessions.csv  (Defender Advanced Hunting — CloudAppEvents)
 
-**Prereq:** Defender for Cloud Apps + MDA app connector for at least one AI app (e.g. ChatGPT Enterprise reverse-proxied through MDA).
+**Requires:** MDA + Conditional Access App Control policies configured for at least one AI app  
+**Output file:** `ai_mda_sessions.csv`  
+**Schema:** `Timestamp, YearMonth, UPN, AppName, ActionType, PolicyHit, PolicyAction, IPAddress, CountryCode, EventCount`
 
-Defender XDR → Advanced Hunting → paste KQL Section **B8** → Run → Export CSV.
+<details>
+<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+
+```kql
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
+    "ChatGPT", "OpenAI", "Claude", "Anthropic",
+    "Gemini", "Perplexity", "Midjourney", "Grammarly",
+    "Notion", "Jasper", "Adobe Firefly", "Canva",
+    "Synthesia", "Runway", "Stability", "Hugging Face"
+]);
+let UserUpns = IdentityInfo
+    | summarize take_any(AccountUpn) by AccountObjectId;
+CloudAppEvents
+| where Timestamp > ago(90d)
+| where Application has_any (AIAppNames)
+| where ActionType in (
+    "FileUploaded", "FileDownloaded", "FilePreviewed",
+    "PasteAction", "PrintAction", "CopyAction",
+    "SessionLogon", "SessionLogoff",
+    "AppAccessBlocked", "FileBlocked", "UploadBlocked"
+)
+| lookup kind=leftouter UserUpns on AccountObjectId
+| extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| extend PolicyHit = tostring(RawEventData.PolicyName)
+| extend PolicyAction = case(
+    ActionType has "Blocked", "Block",
+    ActionType has "Monitor", "Monitor",
+    isnotempty(PolicyHit), "Alert",
+    "Allow"
+)
+| extend IPAddress = tostring(IPAddress)
+| extend CountryCode = tostring(RawEventData.CountryCode)
+| summarize
+    EventCount = count(),
+    Timestamp = min(Timestamp)
+    by YearMonth, UPN,
+       AppName = Application,
+       ActionType,
+       PolicyHit,
+       PolicyAction,
+       IPAddress,
+       CountryCode
+| extend Timestamp = format_datetime(Timestamp, "yyyy-MM-dd HH:mm:ss")
+| project Timestamp, YearMonth, UPN, AppName, ActionType, PolicyHit,
+          PolicyAction, IPAddress, CountryCode, EventCount
+| order by Timestamp asc
+```
+
+</details>
+
+> **Expected result without MDA CAAC:** Query runs cleanly but returns **0 rows** — this is correct. Use the header-only stub CSV (Step 2).
 
 ---
 
