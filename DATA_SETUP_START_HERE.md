@@ -31,7 +31,11 @@ Go to [Option 1](#option-1--manual-step-by-step) · Go to [Option 2](#option-2--
 
 Follow these steps in order. The full click-by-click detail (with every query) is in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) and the query pack [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql).
 
-> **Good news:** most of this option is just copy-paste from the Defender portal — no tools needed. Only the Microsoft Graph files (Step 4) need PowerShell 7, and you'll install it right before that step.
+> **What to expect — this option has two parts:**
+> - **Part 1 (Steps 2–3): no tools at all.** You collect 7 of the 12 files by copying a query, pasting it into a web portal, and clicking **Export** — plus one short list you type yourself. Nothing to install.
+> - **Part 2 (Steps 4–5): one short PowerShell step.** The last 5 files come only from **Microsoft Graph**, which has **no Export button** — so you install **PowerShell 7** once (about 2 minutes) and run a few ready-made commands.
+>
+> You install PowerShell only when you reach Part 2 — Part 1 doesn't need it.
 
 ### Step 1 — Make one folder for your data
 
@@ -40,6 +44,10 @@ Create a single, empty folder to hold all 12 CSV files. For example:
 C:\AI_Usage_Data\
 ```
 Remember this path — you'll type it into the report at the end. **Keep the trailing backslash.**
+
+---
+
+**Part 1 — Files you can collect with no tools (7 files)**
 
 ### Step 2 — Six files from Microsoft Defender (copy & paste queries)
 For each of the six Defender queries (no PowerShell needed for these — they come straight from the portal):
@@ -68,9 +76,16 @@ files in the `PAX_Exporter/presets` folder and change the list at the top marked
 `PAX_Exporter/docs/presets-and-kql.md` under "Customize which AI tools are
 collected."
 
-### Step 3 — Install PowerShell 7
+### Step 3 — One file you fill in by hand
+`ai_solutions_catalog.csv` is a small reference list of AI tools. A ready-to-use starter version is in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) — copy it into your data folder and adjust for your organization. No tools needed — it's just a short list you edit.
 
-The next five files come from Microsoft Graph, which needs **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). The Defender files above did not need it. Installing it is quick — pick **one** option:
+---
+
+**Part 2 — Files that need PowerShell (5 files)**
+
+### Step 4 — Install PowerShell 7
+
+The last five files come from **Microsoft Graph**, which has **no "Export to CSV" button** — the only way to get them is through **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). Installing it is quick — pick **one** option:
 
 **Option A — Microsoft Store (easiest):**
 1. Open the **Microsoft Store** app.
@@ -97,11 +112,10 @@ winget install --id Microsoft.PowerShell --source winget
 
 > From here on, always use the **PowerShell 7** window (the one you just opened), not the older blue "Windows PowerShell".
 
-### Step 4 — Five files from Microsoft Graph (PowerShell 7)
-These come from your **PowerShell 7** window. The exact commands are in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) (sections A1–A5). They cover your user list, Copilot usage, app consents, and sign-ins.
+### Step 5 — Five files from Microsoft Graph (PowerShell 7)
+These come from your **PowerShell 7** window. The exact commands are in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) (sections A1–A5). They cover your user list, Copilot usage, app consents, and sign-ins. Save each file into the folder from Step 1.
 
-### Step 5 — One file you fill in by hand
-`ai_solutions_catalog.csv` is a small reference list of AI tools. A ready-to-use starter version is in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) — copy it into your data folder and adjust for your organization.
+---
 
 ### Step 6 — Open the dashboard
 

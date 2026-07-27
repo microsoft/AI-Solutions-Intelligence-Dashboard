@@ -51,7 +51,7 @@ Every tenant loads the **same report** from the **same 12 CSV files** — you ju
 ### 🟢 Under ~10,000 users
 **Manual CSV export**
 
-Copy-paste queries into the portal and click Export. Almost no scripting.
+Copy-paste queries into the portal and click Export. A few files need one short PowerShell step.
 
 ➡️ **[Start Here](DATA_SETUP_START_HERE.md)** · [Full manual guide](INSTRUCTIONS_v26.md)
 
