@@ -12,26 +12,65 @@ By the end you'll have **12 CSV files** in one folder and an open Power BI repor
 
 ---
 
-## Choose your path
+## Choose your method
 
-There are two ways to collect the data. Both produce the **same 12 CSV files** and open the **same** report. Pick **one** path below and follow it from top to bottom — every step you need is inside that path, so you never have to jump back and forth.
+There are two ways to collect the data. Both produce the **same 12 CSV files** and open the **same** report. Pick **one** option below and follow it from top to bottom — every step you need is inside that option, so you never have to jump back and forth.
 
-- **Path A — Manual (copy & paste)** — best for organizations under ~10,000 users or a one-time pull. Almost no scripting.
-- **Path B — Automated exporter (run a script)** — best for 10,000+ users or repeat pulls. A little scripting; handles Defender's 10,000-row limit for you.
+- **Option 1 — Manual (copy & paste)** — best for organizations under ~10,000 users or a one-time pull. Mostly copy-paste from the Defender portal; a few files need PowerShell.
+- **Option 2 — Automated exporter (run a script)** — best for 10,000+ users or repeat pulls. A little scripting; handles Defender's 10,000-row limit for you.
 
-> Not sure? Pick Path A.
+> Not sure? Pick Option 1.
 
-Go to [Path A](#path-a--manual-step-by-step) · Go to [Path B](#path-b--automated-step-by-step)
+Go to [Option 1](#option-1--manual-step-by-step) · Go to [Option 2](#option-2--automated-step-by-step)
+
+> **Heads-up on wording:** the detailed guide [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) uses **"Path A / Path B"** to mean something different — whether your tenant has **MDA** (Microsoft Defender for Cloud Apps). That is a separate choice from **Option 1 vs Option 2** here.
 
 ---
 
-## Path A — Manual (step by step)
+## Option 1 — Manual (step by step)
 
 Follow these steps in order. The full click-by-click detail (with every query) is in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) and the query pack [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql).
 
-### Step 1 — Install PowerShell 7
+> **Good news:** most of this option is just copy-paste from the Defender portal — no tools needed. Only the Microsoft Graph files (Step 4) need PowerShell 7, and you'll install it right before that step.
 
-A few of the data files come from Microsoft Graph, which needs **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). Installing it is quick — pick **one** option:
+### Step 1 — Make one folder for your data
+
+Create a single, empty folder to hold all 12 CSV files. For example:
+```
+C:\AI_Usage_Data\
+```
+Remember this path — you'll type it into the report at the end. **Keep the trailing backslash.**
+
+### Step 2 — Six files from Microsoft Defender (copy & paste queries)
+For each of the six Defender queries (no PowerShell needed for these — they come straight from the portal):
+1. Go to **https://security.microsoft.com**
+2. In the left menu, open **Hunting → Advanced Hunting**
+3. Click **+ New query**
+4. Open [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql), copy one query, and paste it in
+5. Click **Run query**
+6. Click **Export → Export to CSV**
+7. **Rename** the downloaded file to the exact name listed for that query (e.g. `ai_activity_sessions.csv`) and move it into your data folder
+
+> **If you see "result set size exceeded the allowed limit":** your query returned too much data for the portal. Near the top of the query, change the time window — for example change `ago(180d)` (or `ago(90d)`) to `ago(30d)` or `ago(7d)` — and Run again. For a full pull, use the **Run query as a search job** button shown in the error.
+
+> **If you see "Failed to resolve table ...":** that data table isn't available in your tenant's license (common in smaller or trial tenants). It's safe to **skip that one file** — the report still opens. See the stub-file note in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md).
+
+> **If you see "No results found in the specified time frame":** that's **fine** — the query ran correctly, there just wasn't matching activity. Save it as an empty (header-only) file or skip it.
+
+### Which AI tools does it collect?
+
+By default the exporter looks for 60+ of the most common AI tools (Microsoft 365
+Copilot, ChatGPT, Claude, Gemini, GitHub Copilot, Perplexity, and many more).
+
+Want to add your own or narrow the list? It is a quick edit — open the preset
+files in the `PAX_Exporter/presets` folder and change the list at the top marked
+`EDIT HERE`. Step-by-step instructions are in
+`PAX_Exporter/docs/presets-and-kql.md` under "Customize which AI tools are
+collected."
+
+### Step 3 — Install PowerShell 7
+
+The next five files come from Microsoft Graph, which needs **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). The Defender files above did not need it. Installing it is quick — pick **one** option:
 
 **Option A — Microsoft Store (easiest):**
 1. Open the **Microsoft Store** app.
@@ -58,41 +97,6 @@ winget install --id Microsoft.PowerShell --source winget
 
 > From here on, always use the **PowerShell 7** window (the one you just opened), not the older blue "Windows PowerShell".
 
-### Step 2 — Make one folder for your data
-
-Create a single, empty folder to hold all 12 CSV files. For example:
-```
-C:\AI_Usage_Data\
-```
-Remember this path — you'll type it into the report at the end. **Keep the trailing backslash.**
-
-### Step 3 — Six files from Microsoft Defender (copy & paste queries)
-For each of the six Defender queries:
-1. Go to **https://security.microsoft.com**
-2. In the left menu, open **Hunting → Advanced Hunting**
-3. Click **+ New query**
-4. Open [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql), copy one query, and paste it in
-5. Click **Run query**
-6. Click **Export → Export to CSV**
-7. **Rename** the downloaded file to the exact name listed for that query (e.g. `ai_activity_sessions.csv`) and move it into your data folder
-
-> **If you see "result set size exceeded the allowed limit":** your query returned too much data for the portal. Near the top of the query, change the time window — for example change `ago(180d)` (or `ago(90d)`) to `ago(30d)` or `ago(7d)` — and Run again. For a full pull, use the **Run query as a search job** button shown in the error.
-
-> **If you see "Failed to resolve table ...":** that data table isn't available in your tenant's license (common in smaller or trial tenants). It's safe to **skip that one file** — the report still opens. See the stub-file note in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md).
-
-> **If you see "No results found in the specified time frame":** that's **fine** — the query ran correctly, there just wasn't matching activity. Save it as an empty (header-only) file or skip it.
-
-### Which AI tools does it collect?
-
-By default the exporter looks for 60+ of the most common AI tools (Microsoft 365
-Copilot, ChatGPT, Claude, Gemini, GitHub Copilot, Perplexity, and many more).
-
-Want to add your own or narrow the list? It is a quick edit — open the preset
-files in the `PAX_Exporter/presets` folder and change the list at the top marked
-`EDIT HERE`. Step-by-step instructions are in
-`PAX_Exporter/docs/presets-and-kql.md` under "Customize which AI tools are
-collected."
-
 ### Step 4 — Five files from Microsoft Graph (PowerShell 7)
 These come from your **PowerShell 7** window. The exact commands are in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) (sections A1–A5). They cover your user list, Copilot usage, app consents, and sign-ins.
 
@@ -103,7 +107,7 @@ These come from your **PowerShell 7** window. The exact commands are in [INSTRUC
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
 2. Double-click the report template: **AI Solutions Unified May 4th v5.pbit** (in this folder).
-3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 2 **with a trailing slash**, for example:
+3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 1 **with a trailing slash**, for example:
    ```
    C:\AI_Usage_Data\
    ```
@@ -113,13 +117,13 @@ These come from your **PowerShell 7** window. The exact commands are in [INSTRUC
 
 ---
 
-## Path B — Automated (step by step)
+## Option 2 — Automated (step by step)
 
 Follow these steps in order. This path runs scripts that pull everything for you, including automatically handling Defender's 10,000-row limit. Full detail is in [PAX_Exporter/README.md](PAX_Exporter/README.md).
 
 ### Step 1 — Install PowerShell 7
 
-The exporter scripts run in **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). It's the same installer as Path A — pick **one** option:
+The exporter scripts run in **PowerShell 7** (this is newer than the "Windows PowerShell" that ships with Windows). It's the same installer as Option 1 — pick **one** option:
 
 **Option A — Microsoft Store (easiest):**
 1. Open the **Microsoft Store** app.
@@ -202,7 +206,7 @@ The first script writes the Defender-based files (plus small placeholder files f
 | "result set size exceeded the allowed limit" | Too much data for one screen | Shrink the time window (e.g. `ago(7d)`) or use **Run query as a search job** |
 | "Failed to resolve table ..." | That table/license isn't in your tenant | Skip that file — the report still opens |
 | "No results found in the specified time frame" | Query ran fine, no matching activity | Save an empty header-only file or skip it |
-| **HTTP 403** when running a script | Missing admin-consented permissions | Send the Path B → Step 3 permission list to your admin |
+| **HTTP 403** when running a script | Missing admin-consented permissions | Send the Option 2 → Step 3 permission list to your admin |
 | Report can't find files | Wrong folder path | Re-enter the folder path with a trailing slash |
 
 ---
