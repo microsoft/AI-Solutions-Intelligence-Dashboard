@@ -112,6 +112,17 @@ winget install --id Microsoft.PowerShell --source winget
 
 > From here on, always use the **PowerShell 7** window (the one you just opened), not the older blue "Windows PowerShell".
 
+**One more install — the Microsoft Graph module**
+
+The Step 5 commands use `Connect-MgGraph` and `Get-MgUser`, which come from a free Microsoft module that is **not** included with PowerShell itself. In your **PowerShell 7** window, paste this and press Enter:
+```powershell
+Install-Module Microsoft.Graph -Scope CurrentUser
+```
+- If it asks to trust the **PSGallery** repository, type **Y** and press Enter.
+- It takes a couple of minutes and only needs to be done **once**.
+
+> **Using the Purview option** for `ai_copilot_usage_graph.csv` (instead of the simpler Graph API)? That one also needs the Exchange module — run `Install-Module ExchangeOnlineManagement -Scope CurrentUser` the same way. The Graph API option in Step 5 does not need it.
+
 ### Step 5 — Five files from Microsoft Graph (PowerShell 7)
 These come from your **PowerShell 7** window. The exact commands are in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) (sections A1–A5). They cover your user list, Copilot usage, app consents, and sign-ins. Save each file into the folder from Step 1.
 
