@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Solutions Intelligence Dashboard</title>
+  <meta name="description" content="A single Power BI report that delivers a complete, defensible view of AI usage across your Microsoft 365 tenant.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="hero">
+    <div class="container">
+      <p class="version-badge">version v26.1 &mdash; Validated</p>
+      <h1>AI Solutions Intelligence Dashboard</h1>
+      <p class="lede">
+        A single Power BI report that delivers a complete, defensible view of AI
+        usage across your Microsoft&nbsp;365 tenant &mdash; Copilot adoption,
+        shadow AI, OAuth risk, off-hours/geo anomalies, and (optionally) MDA App
+        Governance &amp; Cloud Discovery &mdash; all in one PBIT.
+      </p>
+
+      <p class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip">
+          &#128229; Download All Files
+        </a>
+      </p>
+
+      <div class="note" role="note">
+        <strong>v26.1 &mdash; June 23, 2026:</strong> All KQL queries in
+        <code>kql_queries_v22_E5V3.kql</code> have been live-tested against a real
+        tenant. Eight bugs fixed across B2, B4, B6, and B8 (UPN resolution, schema
+        portability between Sentinel and native Defender XDR, KQL syntax errors).
+        B3 and B5 validated clean. See the
+        <a href="../kql_queries_v22_E5V3.kql">query pack changelog</a> for details.
+      </div>
+
+      <p class="related-label">Related Templates &amp; Tools:</p>
+      <nav class="badge-row" aria-label="Related templates and tools">
+        <a class="badge badge-green" href="../DATA_SETUP_START_HERE.md">Guide: Start Here</a>
+        <a class="badge badge-violet" href="../PAX_Exporter/README.md">Tool: PAX Exporter</a>
+        <a class="badge badge-blue" href="../AI%20Solutions%20Unified%20May%204th%20v5.pbit">Report: Dashboard PBIT</a>
+        <a class="badge badge-teal" href="../AI_Usage_v26_Blueprint.md">Report: Architecture Blueprint</a>
+        <a class="badge badge-purple" href="../INSTRUCTIONS_v26.md">Report: Setup Instructions</a>
+        <a class="badge badge-darkgreen" href="../kql_queries_v22_E5V3.kql">Report: KQL Query Pack</a>
+        <a class="badge badge-orange" href="../build_v26_sample_data.py">Report: Sample Data Generator</a>
+        <a class="badge badge-red" href="../generate_pbit_v26_unified.py">Tool: PBIT Generator</a>
+      </nav>
+
+      <p class="related-label">Additional Resources:</p>
+      <nav class="link-row" aria-label="Additional resources">
+        <a href="https://learn.microsoft.com/defender-endpoint/">Defender for Endpoint docs</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="https://learn.microsoft.com/defender-cloud-apps/">Defender for Cloud Apps docs</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="https://learn.microsoft.com/purview/audit-solutions-overview">Microsoft Purview Audit docs</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="https://learn.microsoft.com/graph/api/resources/report">Microsoft Graph Reports API</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+
+    <section class="preview" aria-labelledby="preview-h">
+      <h2 id="preview-h">&#9654;&#65039; Report preview</h2>
+      <div class="preview-placeholder" role="img" aria-label="Animated report tour placeholder">
+        <span class="preview-icon" aria-hidden="true">&#9654;</span>
+        <p><em>An animated tour of all 15 pages is coming soon.</em></p>
+        <p class="preview-sub">Scroll down for a description of how to get started.</p>
+      </div>
+    </section>
+
+    <section class="collect" aria-labelledby="collect-h">
+      <h2 id="collect-h">&#129517; Choose how to collect your data</h2>
+      <p class="section-intro">
+        Every tenant loads the <strong>same report</strong> from the
+        <strong>same 12 CSV files</strong> &mdash; you just pick how to generate them.
+      </p>
+      <div class="card-grid grid-3">
+        <article class="card">
+          <h3><span class="dot dot-green" aria-hidden="true"></span>Under ~10,000 users</h3>
+          <p class="card-kicker">Manual CSV export</p>
+          <p>Copy-paste queries into the portal and click Export. Almost no scripting.</p>
+          <p class="card-cta">
+            <a href="../DATA_SETUP_START_HERE.md">Start Here</a>
+            <span aria-hidden="true">&middot;</span>
+            <a href="../INSTRUCTIONS_v26.md">Full manual guide</a>
+          </p>
+        </article>
+        <article class="card">
+          <h3><span class="dot dot-blue" aria-hidden="true"></span>Over ~10,000 users</h3>
+          <p class="card-kicker">Automated PAX exporter</p>
+          <p>Run our updated scripts &mdash; they page past Defender's 10,000-row cap for you.</p>
+          <p class="card-cta">
+            <a href="../PAX_Exporter/README.md">PAX Exporter</a>
+          </p>
+        </article>
+        <article class="card">
+          <h3><span class="dot dot-violet" aria-hidden="true"></span>Just exploring</h3>
+          <p class="card-kicker">Sample data</p>
+          <p>Generate realistic sample CSVs and tour the report with no tenant access.</p>
+          <p class="card-cta">
+            <a href="../build_v26_sample_data.py">Sample Data Generator</a>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="continue" aria-labelledby="continue-h">
+      <h2 id="continue-h">&#128218; Continue reading</h2>
+      <div class="card-grid grid-3">
+        <article class="card">
+          <p class="card-num">1</p>
+          <h3><a href="../DATA_SETUP_START_HERE.md">Start Here</a></h3>
+          <p>The friendly, non-technical overview. Begin here if you're new.</p>
+        </article>
+        <article class="card">
+          <p class="card-num">2</p>
+          <h3><a href="../INSTRUCTIONS_v26.md">Setup &amp; data collection</a></h3>
+          <p>Every CSV, click-by-click &mdash; Graph, Purview, and Defender.</p>
+        </article>
+        <article class="card">
+          <p class="card-num">3</p>
+          <h3><a href="../PAX_Exporter/README.md">Automated exporter</a></h3>
+          <p>Run the PAX scripts to pull everything, past the 10K-row cap.</p>
+        </article>
+        <article class="card">
+          <p class="card-num">4</p>
+          <h3><a href="../kql_queries_v22_E5V3.kql">KQL query pack</a></h3>
+          <p>The six validated Defender Advanced Hunting queries (v26.1).</p>
+        </article>
+        <article class="card">
+          <p class="card-num">5</p>
+          <h3><a href="../AI_Usage_v26_Blueprint.md">Architecture blueprint</a></h3>
+          <p>The tier model, measure design, and generator pipeline.</p>
+        </article>
+        <article class="card">
+          <p class="card-num">6</p>
+          <h3><a href="../SECURITY.md">Security &amp; license</a></h3>
+          <p>Read-only permissions, data handling, and licensing notes.</p>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p><strong>AI Solutions Intelligence Dashboard</strong></p>
+      <p class="footer-links">
+        <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard">View on GitHub</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="../README.md">Read the full README</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
