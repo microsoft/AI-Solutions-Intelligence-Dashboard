@@ -51,21 +51,17 @@ Want to change what it returns (columns, filters)? Edit the `.kql` file — just
 
 Replace every `<PLACEHOLDER>` with your real value:
 
+<small style='color:#666'>Tip: copy the single-line command below, paste it into PowerShell, then press Enter.</small>
+
 ```powershell
-.\Export-DefenderAdvancedHunting.ps1 `
-    -Query      $kql `
-    -StartDate  '<START_DATE>' `   # e.g. 2026-06-01
-    -EndDate    '<END_DATE>'   `   # e.g. 2026-06-08  (exclusive)
-    -OutputPath '<OUTPUT.csv>' `   # e.g. .\ai_activity_sessions.csv
-    -AccessToken '<YOUR_ACCESS_TOKEN>'
+.\Export-DefenderAdvancedHunting.ps1 -Query $kql -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputPath '<OUTPUT.csv>' -AccessToken '<YOUR_ACCESS_TOKEN>'
 ```
 
-Using an app registration instead of a token? Swap the last line:
+Using an app registration instead of a token? Run the exporter and prompt for the secret in one line:
 
 ```powershell
-    -TenantId    '<TENANT_ID>' `
-    -ClientId    '<CLIENT_ID>' `
-    -ClientSecret (Read-Host -AsSecureString 'Client secret')
+$secret = Read-Host -AsSecureString 'Client secret'
+.\Export-DefenderAdvancedHunting.ps1 -Query $kql -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputPath '<OUTPUT.csv>' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
 ```
 
 `-EndDate` is **exclusive** — `2026-06-08` means "up to but not including midnight on the 8th."

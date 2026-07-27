@@ -193,20 +193,28 @@ The scripts sign in to Microsoft Graph and need these permissions **granted and 
 ### Step 4 — Sign in and get an access token
 The most reliable option for repeat runs is an **app registration** (your admin creates one and gives you a Tenant ID, Client ID, and Client Secret). See [PAX_Exporter/docs/authentication.md](PAX_Exporter/docs/authentication.md) for both options explained simply.
 
-### Step 5 — Run the two scripts
-In your **PowerShell 7** window, change into the exporter folder, then run the two collectors (replace the `<PLACEHOLDERS>`; your data folder is the one from Step 2):
+### Step 5 — Run the exporter scripts (three scripts)
+In your **PowerShell 7** window, change into the exporter folder, then run the three collector commands (replace the `<PLACEHOLDERS>`; your data folder is the one from Step 2):
+
+<small style='color:#666'>Tip: copy each single-line command below, paste it into PowerShell, then press Enter. For the Copilot usage collect, run `Connect-ExchangeOnline` interactively before the Purview command.</small>
 
 ```powershell
 cd "PAX_Exporter"
 ```
+
 ```powershell
 .\Invoke-AISolutionsExport.ps1 -TenantId <TENANT_ID> -ClientId <CLIENT_ID> -ClientSecret (Read-Host -AsSecureString 'Client secret') -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data'
 ```
+
 ```powershell
 .\Collect-AISolutionsGraph.ps1 -TenantId <TENANT_ID> -ClientId <CLIENT_ID> -ClientSecret (Read-Host -AsSecureString 'Client secret') -OutputDirectory 'C:\AI_Usage_Data'
 ```
 
-The first script writes the Defender-based files (plus small placeholder files for anything your tenant doesn't have); the second writes the Microsoft Graph files. When both finish, all 12 files are in your data folder.
+```powershell
+Connect-ExchangeOnline; .\Collect-AICopilotUsage.ps1 -OutputDirectory 'C:\AI_Usage_Data'
+```
+
+The first script writes the Defender-based files (plus small placeholder files for anything your tenant doesn't have); the second and third write the Microsoft Graph and Copilot usage files. When all finish, all 12 files are in your data folder.
 
 > **Never type your secret or token directly into a file.** The `Read-Host -AsSecureString` prompt above keeps it out of scripts and logs.
 
