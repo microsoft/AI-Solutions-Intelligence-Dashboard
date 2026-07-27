@@ -1,0 +1,25 @@
+=== activity_sessions copy: MUST CONTAIN ===
+lookup kind=leftouter UserUpns        : True
+coalesce(AccountUpn, AccountObjectId) : True
+Application has_any (AIAppNames)      : True
+empty fallback line                  : True
+=== activity_sessions copy: MUST NOT CONTAIN ===
+tolower(AccountObjectId) [standalone] : False
+RawEventData has_any                  : False
+| where ActionType in ( [filter]      : False
+  (note: countif(ActionType in (...)) in summarize is preserved & expected)
+AIDomains                             : False
+
+=== offhours_geo copy: MUST CONTAIN ===
+coalesce(Country, "Unknown")          : True
+pack_array(PrimaryCountry)            : True
+=== offhours_geo copy: MUST NOT CONTAIN ===
+LocationDetails.countryOrRegion       : False
+dynamic([PrimaryCountry])             : False
+AIDomains (offhours)                  : False
+
+=== token preservation ===
+activity {TIMEFILTER}                 : True
+activity {USERFILTER}                 : True
+offhours {TIMEFILTER}                 : True
+offhours {USERFILTER}                 : True

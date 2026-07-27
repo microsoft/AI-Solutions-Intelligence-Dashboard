@@ -12,6 +12,8 @@
 
 **Related Templates & Tools:**
 
+[![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
+[![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
 [![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
@@ -26,6 +28,109 @@
 👀 **Watch** for updates and announcements
 
 </div>
+
+---
+
+## ▶️ Report preview
+
+<!-- To enable the animated preview: record the report cycling through its pages, export as images/report-preview.gif, then uncomment the line below. -->
+<!-- <div align="center"><img src="images/report-preview.gif" alt="AI Solutions Intelligence Dashboard preview" width="900"></div> -->
+
+*An animated tour of all 15 pages is coming soon. Scroll down to the **Report Pages Overview** for a page-by-page description.*
+
+---
+
+## 🧭 Choose how to collect your data
+
+Every tenant loads the **same report** from the **same 12 CSV files** — you just pick how to generate them.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🟢 Under ~10,000 users
+**Manual CSV export**
+
+Copy-paste queries into the portal and click Export. Almost no scripting.
+
+➡️ **[Start Here](DATA_SETUP_START_HERE.md)** · [Full manual guide](INSTRUCTIONS_v26.md)
+
+</td>
+<td width="33%" valign="top">
+
+### 🔵 Over ~10,000 users
+**Automated PAX exporter**
+
+Run our updated scripts — they page past Defender's 10,000-row cap for you.
+
+➡️ **[PAX Exporter](PAX_Exporter/README.md)**
+
+</td>
+<td width="33%" valign="top">
+
+### 🧪 Just exploring
+**Sample data**
+
+Generate realistic sample CSVs and tour the report with no tenant access.
+
+➡️ **[Sample Data Generator](build_v26_sample_data.py)**
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📚 Continue reading
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**1 · [Start Here](DATA_SETUP_START_HERE.md)**
+
+The friendly, non-technical overview. Begin here if you're new.
+
+</td>
+<td width="33%" valign="top">
+
+**2 · [Setup & data collection](INSTRUCTIONS_v26.md)**
+
+Every CSV, click-by-click — Graph, Purview, and Defender.
+
+</td>
+<td width="33%" valign="top">
+
+**3 · [Automated exporter](PAX_Exporter/README.md)**
+
+Run the PAX scripts to pull everything, past the 10K-row cap.
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+**4 · [KQL query pack](kql_queries_v22_E5V3.kql)**
+
+The six validated Defender Advanced Hunting queries (v26.1).
+
+</td>
+<td width="33%" valign="top">
+
+**5 · [Architecture blueprint](AI_Usage_v26_Blueprint.md)**
+
+The tier model, measure design, and generator pipeline.
+
+</td>
+<td width="33%" valign="top">
+
+**6 · [Security & license](SECURITY.md)**
+
+Read-only permissions, data handling, and licensing notes.
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -234,11 +339,11 @@ Thank you!
 
 ### Step 1. Collect Your Data (CSVs)
 
-The dashboard is powered by 13 CSV files. Depending on your tenant's license tier, you'll populate 10 baseline CSVs and either stub or populate 3 MDA-specific CSVs. Save all files in a single folder (e.g., `C:\AI_Usage_Data\` on Windows or `~/AI_Usage_Data/` on macOS).
+The dashboard is powered by 12 CSV files. Depending on your tenant's license tier, you'll populate 9 baseline CSVs and either stub or populate 3 MDA-specific CSVs. Save all files in a single folder (e.g., `C:\AI_Usage_Data\` on Windows or `~/AI_Usage_Data/` on macOS).
 
-#### Method 1: Path A — Setup without MDA (M365 E3/E5 + MDE Plan 2)
+#### Path A — Setup without MDA (M365 E3/E5 + MDE Plan 2)
 
-Collect the 10 baseline CSVs using Microsoft Graph PowerShell, Purview Audit exports, and Defender Advanced Hunting KQL queries, then create 3 header-only MDA stub files so Power Query loads cleanly. Estimated time: 30–45 minutes.
+Collect the 9 baseline CSVs using Microsoft Graph PowerShell, Purview Audit exports, and Defender Advanced Hunting KQL queries, then create 3 header-only MDA stub files so Power Query loads cleanly. Estimated time: 30–45 minutes.
 
 <details>
 <summary><strong>Detailed step-by-step guide</strong></summary>
@@ -257,8 +362,7 @@ Collect the 10 baseline CSVs using Microsoft Graph PowerShell, Purview Audit exp
 | 6 | `ai_sso_signins.csv` | Entra Sign-In Logs via Graph (`Get-MgAuditLogSignIn`) |
 | 7 | `ai_file_proximity.csv` | Defender XDR Advanced Hunting (`DeviceFileEvents` joined with `DeviceNetworkEvents`) |
 | 8 | `ai_offhours_geo.csv` | Defender XDR Advanced Hunting (`AADSignInEventsBeta`) |
-| 9 | `ai_copilot_usage_graph.csv` | Microsoft Graph Reports API — `getMicrosoft365CopilotUsageUserDetail(period='D90')` (alternative to Purview source in #3) |
-| 10 | `ai_client_channel.csv` | Defender XDR Advanced Hunting (Browser / Desktop / API split from UserAgent) |
+| 9 | `ai_client_channel.csv` | Defender XDR Advanced Hunting (Browser / Desktop / API split from UserAgent) |
 
 **Then create 3 MDA stub files** (header-only CSVs):
 
@@ -285,22 +389,22 @@ See [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) for the complete PowerShell scrip
 
 ---
 
-#### Method 2: Path B — Setup with Full MDA (M365 E5 + MDE Plan 2 + MDA)
+#### Path B — Setup with Full MDA (M365 E5 + MDE Plan 2 + MDA)
 
-Collect all 10 baseline CSVs from Path A, then populate the 3 MDA CSVs with real data from App Governance alerts, Cloud Discovery exports, and Conditional Access App Control session logs.
+Collect all 9 baseline CSVs from Path A, then populate the 3 MDA CSVs with real data from App Governance alerts, Cloud Discovery exports, and Conditional Access App Control session logs.
 
 <details>
 <summary><strong>Detailed step-by-step guide</strong></summary>
 
 <br>
 
-Complete all 10 baseline CSVs from Path A, then populate these 3 additional files:
+Complete all 9 baseline CSVs from Path A, then populate these 3 additional files:
 
 | # | File | Source |
 |---|---|---|
-| 11 | `ai_appgov_alerts.csv` | Defender XDR Advanced Hunting (`AppGovernanceAlert` table, filtered for AI apps) |
-| 12 | `ai_cloud_discovery.csv` | MDA portal → Cloud Discovery → Discovered Apps → Filter `Category = Generative AI` → Export CSV → reshape with PowerShell |
-| 13 | `ai_mda_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents` with Conditional Access App Control session policies) |
+| 10 | `ai_appgov_alerts.csv` | Defender XDR Advanced Hunting (`AppGovernanceAlert` table, filtered for AI apps) |
+| 11 | `ai_cloud_discovery.csv` | MDA portal → Cloud Discovery → Discovered Apps → Filter `Category = Generative AI` → Export CSV → reshape with PowerShell |
+| 12 | `ai_mda_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents` with Conditional Access App Control session policies) |
 
 **Prerequisites for Path B:**
 
@@ -462,7 +566,7 @@ generate_pbit_v26_unified.py
   └─ Outputs AI_Usage_v26_Unified.pbit
 ```
 
-**CSV count:** 13 total (was 9 in v22 NoMDA). The 3 new MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`.
+**CSV count:** 12 total (was 9 in v22 NoMDA). The 3 new MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`.
 
 </details>
 

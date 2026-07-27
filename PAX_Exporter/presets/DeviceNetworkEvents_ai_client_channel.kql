@@ -1,0 +1,86 @@
+// DeviceNetworkEvents_ai_client_channel.kql
+//
+// Advanced Hunting preset for the dashboard artifact `ai_client_channel.csv`.
+//
+// SCHEMA (exact, matches the dashboard's Power Query expectations):
+//   AISite, Channel, YearMonth, EventCount
+//
+// This is the MONTHLY-AGGREGATED query (Section B5 of kql_queries_v22_E5V3.kql).
+// It is consumed by Export-DefenderAdvancedHunting.ps1 and MUST be run in Month
+// partition mode so per-month EventCount aggregates stay EXACT:
+//
+//   .\Export-DefenderAdvancedHunting.ps1 `
+//       -Query (Get-Content .\presets\DeviceNetworkEvents_ai_client_channel.kql -Raw) `
+//       -PartitionMode Month -TimeColumn Timestamp `
+//       -StartDate '2026-01-01' -EndDate '2026-07-01' `
+//       -OutputPath .\ai_client_channel.csv -AccessToken $env:GRAPH_TOKEN
+//
+// TOKEN (single; do NOT add your own time predicate):
+//   {TIMEFILTER} — replaced per calendar-month partition with
+//       Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
+//
+// NOTE: this preset aggregates by AISite/Channel/YearMonth (no user dimension),
+// so it carries NO user-filter token and is EXEMPT from user-hash bucketing.
+// A single month of client-channel aggregates is far below the 10,000-row cap.
+//
+// ===========================================================================
+// EDIT HERE - the list of AI websites to collect (customer-configurable)
+//   - Add a "domain" line to START collecting a tool by the site people visit;
+//     delete a line to STOP. Matching is case-insensitive on the URL.
+//   - Keep this list roughly in sync with the AIAppNames lists in the two
+//     Cloud/SignIn presets so a tool is caught by BOTH app name and website.
+//   - Any domain you add is kept automatically. Full guide: docs/presets-and-kql.md
+// ===========================================================================
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
+]);
+DeviceNetworkEvents
+| where {TIMEFILTER}
+| where ActionType == "ConnectionSuccess"
+| where RemoteUrl has_any (AIDomains)
+| extend AISite = case(
+    RemoteUrl has "copilot.microsoft.com" or RemoteUrl has "copilot.cloud.microsoft", "copilot.microsoft.com",
+    RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "chatgpt.com",
+    RemoteUrl has "api.openai.com", "api.openai.com",
+    RemoteUrl has "claude.ai", "claude.ai",
+    RemoteUrl has "api.anthropic.com", "api.anthropic.com",
+    RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "gemini.google.com",
+    RemoteUrl has "perplexity.ai", "perplexity.ai",
+    RemoteUrl has "midjourney.com", "midjourney.com",
+    RemoteUrl has "huggingface.co", "huggingface.co",
+    RemoteUrl has "stability.ai", "stability.ai",
+    RemoteUrl has "jasper.ai", "jasper.ai",
+    RemoteUrl has "grammarly.com", "grammarly.com",
+    RemoteUrl has "notion.so", "notion.so",
+    RemoteUrl has "firefly.adobe.com", "firefly.adobe.com",
+    RemoteUrl has "runwayml.com", "runwayml.com",
+    RemoteUrl has "canva.com", "canva.com",
+    RemoteUrl has "app.synthesia.io", "app.synthesia.io",
+    RemoteUrl
+)
+| extend Channel = case(
+    InitiatingProcessFileName has_any ("chrome.exe", "msedge.exe", "firefox.exe",
+        "brave.exe", "safari", "opera.exe", "iexplore.exe",
+        "Chrome", "Safari", "Firefox"), "Browser",
+    InitiatingProcessFileName has_any ("python", "node", "java", "curl",
+        "powershell", "pwsh", "cmd.exe", "bash",
+        "dotnet", "go"), "API",
+    "Desktop"
+)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize EventCount = count() by AISite, Channel, YearMonth
+| order by AISite asc, YearMonth asc, Channel asc

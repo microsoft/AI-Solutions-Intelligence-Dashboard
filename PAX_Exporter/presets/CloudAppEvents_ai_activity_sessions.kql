@@ -1,0 +1,108 @@
+// CloudAppEvents_ai_activity_sessions.kql
+//
+// Advanced Hunting preset for the dashboard artifact `ai_activity_sessions.csv`.
+//
+// SCHEMA (exact, matches the dashboard's Power Query expectations):
+//   UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
+//   DistinctDevices, Category, RiskTier
+//
+// This is the MONTHLY-AGGREGATED query (Section B2 of kql_queries_v22_E5V3.kql).
+// It is consumed by Export-DefenderAdvancedHunting.ps1 and MUST be run in Month
+// partition mode so per-user monthly dcount() values stay EXACT:
+//
+//   .\Export-DefenderAdvancedHunting.ps1 `
+//       -Query (Get-Content .\presets\CloudAppEvents_ai_activity_sessions.kql -Raw) `
+//       -PartitionMode Month -TimeColumn Timestamp -UserBucketColumn UPN `
+//       -StartDate '2026-01-01' -EndDate '2026-07-01' `
+//       -OutputPath .\ai_activity_sessions.csv -AccessToken $env:GRAPH_TOKEN
+//
+// TOKENS (both required; do NOT add your own time or user predicate):
+//   {TIMEFILTER} — replaced per calendar-month partition with
+//       Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
+//   {USERFILTER} — normally 'true'. When a single month still exceeds the
+//       10,000-row cap and -UserBucketColumn UPN is supplied, the exporter
+//       replaces it with hash(UPN, <N>) == <b> to split users into N hash
+//       buckets. A user's whole month hashes to ONE bucket, so dcount() stays
+//       exact. UPN is defined just above {USERFILTER}, so the predicate is valid.
+//
+// ===========================================================================
+// EDIT HERE - the list of AI tools to collect (customer-configurable)
+//   - Add a "name" line to START collecting a tool; delete a line to STOP.
+//   - Matching is case-insensitive, whole word/phrase, against the app name.
+//   - To also catch a tool by the website people visit, add its domain to the
+//     AIDomains list in BOTH DeviceNetworkEvents_*.kql presets.
+//   - Any tool you add is kept automatically under its own name - you do NOT
+//     need to change anything else below. Full guide: docs/presets-and-kql.md
+// ===========================================================================
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
+]);
+// Resolve Entra ObjectId -> UPN via IdentityInfo. Rows with no match fall back
+// to the raw ObjectId GUID -- those rows won't join EntraUsers in Power BI but
+// still contribute to session counts (expected for guest/service accounts).
+let UserUpns = IdentityInfo
+    | summarize take_any(AccountUpn) by AccountObjectId;
+CloudAppEvents
+| where {TIMEFILTER}
+| where Application has_any (AIAppNames)
+| lookup kind=leftouter UserUpns on AccountObjectId
+| extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
+| where {USERFILTER}
+| extend AISolution = case(
+    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
+    Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
+    Application has "Claude" or Application has "Anthropic", "Claude",
+    Application has "Gemini" or Application has "Bard", "Gemini",
+    Application has "Perplexity", "Perplexity",
+    Application has "Midjourney", "Midjourney",
+    Application has "Bing Chat" or Application has "Bing Copilot", "Bing Chat Enterprise",
+    Application has "Grammarly", "Grammarly",
+    Application has "Notion", "Notion AI",
+    Application has "Firefly" or Application has "Adobe Firefly", "Adobe Firefly",
+    Application has "Jasper", "Jasper",
+    Application has "Synthesia", "Synthesia",
+    Application has "Runway", "Runway",
+    Application has "Hugging Face", "Hugging Face",
+    Application has "Canva", "Canva AI",
+    Application has "Stability", "Stability AI",
+    Application  // fallback: keep any allowlisted tool under its own app name
+)
+| where isnotempty(AISolution)
+| extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| summarize
+    Sessions = count(),
+    ActiveDays = dcount(bin(Timestamp, 1d)),
+    EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
+    DistinctDevices = dcount(DeviceType)
+    by UPN, AISolution, YearMonth
+| extend Category = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
+    AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
+    AISolution in ("Grammarly", "Jasper"), "Writing",
+    AISolution in ("Notion AI", "Canva AI"), "Productivity",
+    AISolution in ("Synthesia", "Runway"), "Video",
+    "Other"
+)
+| extend RiskTier = case(
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
+    "Unsanctioned"
+)
+| project UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier
+| order by UPN asc, YearMonth asc

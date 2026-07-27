@@ -1,0 +1,9 @@
+# Exported data — never commit these
+*.csv
+*.log
+*.tmp
+/_evidence/
+
+# OS cruft
+Thumbs.db
+.DS_Store

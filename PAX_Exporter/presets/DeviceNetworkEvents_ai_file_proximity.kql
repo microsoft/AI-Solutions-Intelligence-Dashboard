@@ -1,0 +1,122 @@
+// DeviceNetworkEvents_ai_file_proximity.kql
+//
+// Advanced Hunting preset for the dashboard artifact `ai_file_proximity.csv`.
+//
+// SCHEMA (exact, matches the dashboard's Power Query expectations):
+//   Timestamp, UPN, AISolution, YearMonth, FileName, FolderCategory,
+//   FolderPath, SecondsToAI, NameMatchesSensitivePattern, FolderMatchesSensitive
+//
+// This is the ROW-GRAIN correlation query (Section B3 of kql_queries_v22_E5V3.kql).
+// It joins DeviceNetworkEvents (AI website visits) to DeviceFileEvents (file
+// activity) and emits ONE ROW per file touched within 5 minutes of an AI visit.
+// Because the output is event-grain (not aggregated), it is consumed by
+// Export-DefenderAdvancedHunting.ps1 in ADAPTIVE partition mode:
+//
+//   .\Export-DefenderAdvancedHunting.ps1 `
+//       -Query (Get-Content .\presets\DeviceNetworkEvents_ai_file_proximity.kql -Raw) `
+//       -PartitionMode Adaptive -TimeColumn Timestamp `
+//       -StartDate '2026-01-01' -EndDate '2026-07-01' `
+//       -OutputPath .\ai_file_proximity.csv -AccessToken $env:GRAPH_TOKEN
+//
+// TOKEN (single; do NOT add your own time predicate):
+//   {TIMEFILTER} — replaced per adaptive sub-window with
+//       Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
+//   It binds ONLY the AIVisits anchor (the DeviceNetworkEvents source). The
+//   DeviceFileEvents side (FileAccess) INTENTIONALLY keeps its own
+//   `where Timestamp > ago(90d)` window: a file created up to 5 minutes AFTER
+//   an AI visit sitting at a partition's trailing edge must still be visible to
+//   the inner join, so the file side must NOT be clamped to the same sub-window.
+//
+// NOTE: this preset correlates at event grain with no per-user monthly
+// aggregation, so it carries NO user-filter token and is EXEMPT from user-hash
+// bucketing. Adaptive time-slicing keeps each window under the 10,000-row cap.
+//
+// ===========================================================================
+// EDIT HERE - the list of AI websites to collect (customer-configurable)
+//   - Add a "domain" line to START collecting a tool by the site people visit;
+//     delete a line to STOP. Matching is case-insensitive on the URL.
+//   - Keep this list roughly in sync with the AIAppNames lists in the two
+//     Cloud/SignIn presets so a tool is caught by BOTH app name and website.
+//   - Any domain you add is kept automatically. Full guide: docs/presets-and-kql.md
+// ===========================================================================
+let AIDomains = dynamic([
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
+]);
+let SensitiveNamePatterns = dynamic([
+    "confidential", "secret", "password", "credential", "private",
+    "restricted", "internal", "draft", "salary", "ssn", "pii",
+    "financial", "budget", "forecast", "strategy", "merger",
+    "acquisition", "termination", "layoff", "patent"
+]);
+let SensitiveFolderPatterns = dynamic([
+    "confidential", "restricted", "hr", "legal", "finance",
+    "executive", "board", "compliance", "audit", "security"
+]);
+// Step 1: Find AI site visits
+let AIVisits =
+    DeviceNetworkEvents
+    | where {TIMEFILTER}
+    | where ActionType == "ConnectionSuccess"
+    | where RemoteUrl has_any (AIDomains)
+    | extend AISolution = case(
+        RemoteUrl has "copilot.microsoft.com", "Microsoft 365 Copilot",
+        RemoteUrl has "chat.openai.com" or RemoteUrl has "chatgpt.com", "ChatGPT",
+        RemoteUrl has "claude.ai", "Claude",
+        RemoteUrl has "gemini.google.com" or RemoteUrl has "bard.google.com", "Gemini",
+        RemoteUrl has "perplexity.ai", "Perplexity",
+        RemoteUrl has "midjourney.com", "Midjourney",
+        RemoteUrl has "huggingface.co", "Hugging Face",
+        RemoteUrl has "stability.ai", "Stability AI",
+        RemoteUrl has "jasper.ai", "Jasper",
+        RemoteUrl has "grammarly.com", "Grammarly",
+        RemoteUrl has "notion.so", "Notion AI",
+        RemoteUrl has "firefly.adobe.com", "Adobe Firefly",
+        RemoteUrl has "runwayml.com", "Runway",
+        RemoteUrl has "canva.com", "Canva AI",
+        RemoteUrl has "app.synthesia.io", "Synthesia",
+        "Other AI"
+    )
+    | project AITimestamp = Timestamp, DeviceId, AISolution;
+// Step 2: Find file access events
+let FileAccess =
+    DeviceFileEvents
+    | where Timestamp > ago(90d)
+    | where ActionType in ("FileCreated", "FileModified", "FileRenamed", "FileCopied")
+    | where FileName !endswith ".tmp" and FileName !endswith ".log"
+    | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
+              InitiatingProcessAccountUpn;
+// Step 3: Join — files accessed within 5 minutes of AI visit
+AIVisits
+| join kind=inner FileAccess on DeviceId
+| where FileTimestamp between (AITimestamp .. (AITimestamp + 5m))
+| extend SecondsToAI = datetime_diff("second", FileTimestamp, AITimestamp)
+| extend UPN = tolower(InitiatingProcessAccountUpn)
+| extend YearMonth = format_datetime(AITimestamp, "yyyy-MM")
+| extend FolderCategory = case(
+    FolderPath has "Desktop", "Desktop",
+    FolderPath has "Downloads", "Downloads",
+    FolderPath has "Documents", "Documents",
+    FolderPath has "OneDrive", "OneDrive",
+    FolderPath has "SharePoint", "SharePoint",
+    "Other"
+)
+| extend NameMatchesSensitivePattern = iff(FileName has_any (SensitiveNamePatterns), 1, 0)
+| extend FolderMatchesSensitive = iff(FolderPath has_any (SensitiveFolderPatterns), 1, 0)
+| project Timestamp = AITimestamp, UPN, AISolution, YearMonth, FileName,
+          FolderCategory, FolderPath, SecondsToAI,
+          NameMatchesSensitivePattern, FolderMatchesSensitive
+| order by Timestamp asc

@@ -1,0 +1,91 @@
+// AADSignInEventsBeta_ai_offhours_geo.kql
+//
+// Advanced Hunting preset for the dashboard artifact `ai_offhours_geo.csv`.
+//
+// SCHEMA (exact, matches the dashboard's Power Query expectations):
+//   UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
+//   DistinctCountries, AnomalousCountryCount, AnomalousCountries
+//
+// This is the MONTHLY-AGGREGATED query (Section B4 of kql_queries_v22_E5V3.kql).
+// It is consumed by Export-DefenderAdvancedHunting.ps1 and MUST be run in Month
+// partition mode so per-user monthly dcount() values stay EXACT:
+//
+//   .\Export-DefenderAdvancedHunting.ps1 `
+//       -Query (Get-Content .\presets\AADSignInEventsBeta_ai_offhours_geo.kql -Raw) `
+//       -PartitionMode Month -TimeColumn Timestamp -UserBucketColumn UPN `
+//       -StartDate '2026-01-01' -EndDate '2026-07-01' `
+//       -OutputPath .\ai_offhours_geo.csv -AccessToken $env:GRAPH_TOKEN
+//
+// TOKENS (both required; do NOT add your own time or user predicate):
+//   {TIMEFILTER} — replaced per calendar-month partition with
+//       Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
+//   {USERFILTER} — normally 'true'. When a single month still exceeds the
+//       10,000-row cap and -UserBucketColumn UPN is supplied, the exporter
+//       replaces it with hash(UPN, <N>) == <b> to split users into N hash
+//       buckets. A user's whole month hashes to ONE bucket, so per-user
+//       dcount()/aggregates stay exact. UPN is defined just above {USERFILTER},
+//       so the hash(UPN, ...) predicate is valid at the filter point.
+//
+// ===========================================================================
+// EDIT HERE - the list of AI tools to collect (customer-configurable)
+//   - Add a "name" line to START collecting a tool; delete a line to STOP.
+//   - Matching is case-insensitive, whole word/phrase, against the app name.
+//   - To also catch a tool by the website people visit, add its domain to the
+//     AIDomains list in BOTH DeviceNetworkEvents_*.kql presets.
+//   - Any tool you add is kept automatically under its own name - you do NOT
+//     need to change anything else below. Full guide: docs/presets-and-kql.md
+// ===========================================================================
+let AIAppNames = dynamic([
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
+]);
+// Step 1: Identify AI-related sign-ins
+let AISignIns =
+    AADSignInEventsBeta
+    | where {TIMEFILTER}
+    | where ErrorCode == 0  // successful sign-ins only
+    | where Application has_any (AIAppNames)
+        or ResourceDisplayName has_any (AIAppNames)
+    | extend UPN = tolower(AccountUpn)
+    | where {USERFILTER}
+    | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+    | extend HourOfDay = hourofday(Timestamp)
+    | extend IsOffHours = iff(HourOfDay < 7 or HourOfDay >= 19, 1, 0)
+    | extend Country = coalesce(Country, "Unknown")  // FIX 1: direct column, LocationDetails dot-notation does not exist
+    | project UPN, YearMonth, Timestamp, IsOffHours, Country;
+// Step 2: Compute per-user primary country (for anomaly detection)
+let UserPrimaryCountry =
+    AISignIns
+    | summarize CountryCount = count() by UPN, Country
+    | summarize TotalEvents = sum(CountryCount), arg_max(CountryCount, Country) by UPN
+    | project UPN, PrimaryCountry = Country;
+// Step 3: Aggregate
+AISignIns
+| summarize
+    TotalSessions = count(),
+    OffHoursSessions = countif(IsOffHours == 1),
+    DistinctCountries = dcount(Country),
+    Countries = make_set(Country)
+    by UPN, YearMonth
+| extend OffHoursPct = round(todouble(OffHoursSessions) / todouble(TotalSessions), 4)
+| join kind=leftouter UserPrimaryCountry on UPN
+| extend AnomalousCountries = set_difference(Countries, pack_array(PrimaryCountry))  // FIX 2: dynamic([col]) causes parse error
+| extend AnomalousCountryCount = array_length(AnomalousCountries)
+| extend AnomalousCountries = iff(AnomalousCountryCount > 0,
+    strcat_array(AnomalousCountries, "; "), "")
+| project UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct,
+          DistinctCountries, AnomalousCountryCount, AnomalousCountries
+| order by UPN asc, YearMonth asc
