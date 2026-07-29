@@ -14,7 +14,7 @@
 
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
-[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
+[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
@@ -467,7 +467,7 @@ Required for the Behavioral Risk, Shadow AI, and User Drilldown pages.
 
 <br>
 
-1. Download [AI Solutions Unified May 4th v5.pbit](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
+1. Download [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
 2. Double-click the file → Power BI Desktop opens
 3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path **with a trailing slash**:
    - Windows: `C:\AI_Usage_Data\`

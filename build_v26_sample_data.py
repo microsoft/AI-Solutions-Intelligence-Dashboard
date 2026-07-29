@@ -2,7 +2,7 @@
 """Deterministic, stdlib-only synthetic test-data generator.
 
 Writes 12 CSV files whose headers EXACTLY match the columns expected by
-"AI Solutions Unified May 4th v5.pbit" into a `sample_data_v26/` folder
+"AI-Solutions-Intelligence-Dashboard V1.pbit" into a `sample_data_v26/` folder
 located next to this script. Output is reproducible via SEED = 20260504.
 """
 

@@ -42,7 +42,7 @@ The PBIT is identical for both paths — the difference is just what's in the da
 
 - Power BI Desktop (latest)
 - One folder for all CSVs, e.g. `C:\AI_Usage_Data\` (Windows) or `~/AI_Usage_Data/` (Mac)
-- The PBIT file: [AI Solutions Unified May 4th v5.pbit](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
+- The PBIT file: [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
 - The KQL pack: [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql)
 
 Permissions you will need over the course of setup:
@@ -536,7 +536,7 @@ CloudAppEvents
 
 ## Step 4 — Open the PBIT
 
-1. Double-click [AI Solutions Unified May 4th v5.pbit](AI%20Solutions%20Unified%20May%204th%20v5.pbit)
+1. Double-click [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
 2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path (with trailing slash):
    - Windows: `C:\AI_Usage_Data\`
    - Mac: `/Users/yourname/AI_Usage_Data/`
@@ -599,7 +599,7 @@ When MDA gets deployed in your tenant later:
 
 | File | Source | Schema |
 |---|---|---|
-| [AI Solutions Unified May 4th v5.pbit](AI%20Solutions%20Unified%20May%204th%20v5.pbit) | Power BI template (15 pages, 122 measures) | — |
+| [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit) | Power BI template (10 pages, 122 measures) | — |
 | [AI_Usage_v26_Blueprint.md](AI_Usage_v26_Blueprint.md) | Architecture & page-tier mapping | — |
 | [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql) | All collection queries (A1–A5, B2–B8) | — |
 

@@ -131,7 +131,7 @@ These come from your **PowerShell 7** window. The exact commands are in [INSTRUC
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click the report template: **AI Solutions Unified May 4th v5.pbit** (in this folder).
+2. Double-click the report template: **AI-Solutions-Intelligence-Dashboard V1.pbit** (in this folder).
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 1 **with a trailing slash**, for example:
    ```
    C:\AI_Usage_Data\
@@ -221,7 +221,7 @@ The first script writes the Defender-based files (plus small placeholder files f
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click the report template: **AI Solutions Unified May 4th v5.pbit** (in this folder).
+2. Double-click the report template: **AI-Solutions-Intelligence-Dashboard V1.pbit** (in this folder).
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 2 **with a trailing slash**, for example:
    ```
    C:\AI_Usage_Data\
