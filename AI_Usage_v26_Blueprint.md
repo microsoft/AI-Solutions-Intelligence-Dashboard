@@ -1,5 +1,7 @@
 # AI Usage Dashboard v26 — Unified Edition Blueprint
 
+> **⚠️ Historical design document.** This blueprint captures the original design and planning rationale (a draft 16–18 page layout and the `v21`/`v22` generator lineage). The **shipped template** is `AI-Solutions-Intelligence-Dashboard V26.pbit` with **10 pages**: Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Shadow AI Catalog (MDA), Benchmarks & Targets, Glossary & Data Dictionary, Tier Comparison. See `README.md` → *Report Pages Overview* for the current layout. The page-tier table below is retained for design history only.
+
 **Goal:** Replace the two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a **single PBIT** that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly overlay when the underlying data is empty.
 
 **Output file:** `AI_Usage_v26_Unified.pbit`

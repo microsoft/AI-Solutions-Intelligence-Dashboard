@@ -42,7 +42,7 @@ The PBIT is identical for both paths — the difference is just what's in the da
 
 - Power BI Desktop (latest)
 - One folder for all CSVs, e.g. `C:\AI_Usage_Data\` (Windows) or `~/AI_Usage_Data/` (Mac)
-- The PBIT file: [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
+- The PBIT file: [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
 - The KQL pack: [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql)
 
 Permissions you will need over the course of setup:
@@ -536,7 +536,7 @@ CloudAppEvents
 
 ## Step 4 — Open the PBIT
 
-1. Double-click [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
+1. Double-click [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
 2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path (with trailing slash):
    - Windows: `C:\AI_Usage_Data\`
    - Mac: `/Users/yourname/AI_Usage_Data/`
@@ -558,7 +558,7 @@ CloudAppEvents
 | "Shadow AI Catalog (MDA)" — **Path B** | Yellow callout shown, KPIs and detail table populated |
 | "Benchmarks & Targets" | Target sliders functional, gap indicators populated |
 | "Tier Comparison" | Coverage matrix renders |
-| "Action Plan" | Verdicts, scorecards, and top actions displayed |
+| "Glossary & Data Dictionary" | Category / term definitions table renders |
 
 ---
 
@@ -587,7 +587,7 @@ When MDA gets deployed in your tenant later:
 | Symptom | Cause | Fix |
 |---|---|---|
 | "We couldn't find the file" on load | Folder path missing trailing slash | Add trailing `\` (Windows) or `/` (Mac) |
-| Page 11/12/13 visuals blank but no overlay | Stub CSV missing | Create the header-only CSV from Step 2 |
+| "Shadow AI Catalog (MDA)" visuals blank but no overlay | Stub CSV missing | Create the header-only CSV from Step 2 |
 | All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_usage_graph.csv` from Purview Audit (Step 1.2) |
 | Weekly Days > 7 | Old PBIT version | Re-download the latest PBIT; the `Weekly Days Used per User` measure is hard-capped at 7 |
 | "Behavioral Risk" page empty | Missing MDE Plan 2 export | Re-export `ai_file_proximity.csv` and `ai_offhours_geo.csv` (Steps 1.6, 1.7) |
@@ -599,7 +599,7 @@ When MDA gets deployed in your tenant later:
 
 | File | Source | Schema |
 |---|---|---|
-| [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit) | Power BI template (10 pages, 122 measures) | — |
+| [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit) | Power BI template (10 pages, 122 measures) | — |
 | [AI_Usage_v26_Blueprint.md](AI_Usage_v26_Blueprint.md) | Architecture & page-tier mapping | — |
 | [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql) | All collection queries (A1–A5, B2–B8) | — |
 

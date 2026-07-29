@@ -14,7 +14,7 @@
 
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
-[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
+[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
@@ -36,7 +36,7 @@
 <!-- To enable the animated preview: record the report cycling through its pages, export as images/report-preview.gif, then uncomment the line below. -->
 <!-- <div align="center"><img src="images/report-preview.gif" alt="AI Solutions Intelligence Dashboard preview" width="900"></div> -->
 
-*An animated tour of all 15 pages is coming soon. Scroll down to the **Report Pages Overview** for a page-by-page description.*
+*An animated tour of all 10 pages is coming soon. Scroll down to the **Report Pages Overview** for a page-by-page description.*
 
 ---
 
@@ -162,7 +162,7 @@ Drill into per-user activity across all signals, visualize department intensity 
 
 <br>
 
-The dashboard includes **15** interactive report pages organized into core analytics, MDA-powered pages, reference glossaries, and an action planning page.
+The dashboard includes **10** interactive report pages organized into core analytics, an MDA-powered catalog, and a consolidated glossary & data dictionary.
 
 ---
 
@@ -238,45 +238,18 @@ Interactive what-if parameter sliders for Copilot adoption target, workforce AI 
 
 ---
 
-### 9. Tier Comparison
+### 9. Glossary & Data Dictionary
+
+Consolidated reference page with plain-language definitions for every adoption, risk, and shadow AI metric, plus a data dictionary describing each source table and CSV. A static reference page that works on every license tier with no data dependency.
+
+*Screenshot coming soon*
+*Click image to enlarge*
+
+---
+
+### 10. Tier Comparison
 
 Coverage matrix mapping each report page to its required license level (E3+Copilot → E5/MDE P2 → MDA). Self-service tier identification — which pages have data vs. empty visuals tells you exactly where your tenant stands.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 10. Data Source
-
-Row counts and refresh status per CSV, showing data source health at a glance. Confirms which data files loaded successfully and flags any missing or empty sources.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 11–13. Glossary Pages (Adoption / Risk / Shadow AI)
-
-Three dedicated glossary pages providing plain-language definitions for all adoption metrics, risk metrics, and shadow AI terminology. Static reference pages that work on every license tier with no data dependency.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 14. User Drilldown
-
-Per-user detail table joining all signals — AI activity, Copilot usage, OAuth consents, sign-ins, file proximity, off-hours, and geo anomalies — into a single searchable view.
-
-*Screenshot coming soon*
-*Click image to enlarge*
-
----
-
-### 15. Action Plan
-
-Executive action planning page with adoption verdicts, risk verdicts, top 3 recommended actions, risk funnel visualization (Total Workforce → AI Users → Unmanaged → Multi-Tool → High-Intensity), scorecard status indicators, and department-level governance scatter quadrant analysis.
 
 *Screenshot coming soon*
 *Click image to enlarge*
@@ -448,7 +421,7 @@ Ensure you have the required software, roles, and (optionally) Defender services
 
 #### Option C: Enable Microsoft Defender for Endpoint (MDE Plan 2)
 
-Required for the Behavioral Risk, Shadow AI, and User Drilldown pages.
+Required for the Behavioral Risk and Shadow AI pages.
 
 1. **Verify licence** — Microsoft 365 admin centre → Billing → Your products. Confirm you have M365 E5, or E3 + MDE Plan 2 add-on.
 2. **Onboard devices** — Defender XDR portal → Settings → Endpoints → Onboarding. Use Intune (simplest), Group Policy, or local script.
@@ -467,7 +440,7 @@ Required for the Behavioral Risk, Shadow AI, and User Drilldown pages.
 
 <br>
 
-1. Download [AI-Solutions-Intelligence-Dashboard V1.pbit](AI-Solutions-Intelligence-Dashboard%20V1.pbit)
+1. Download [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
 2. Double-click the file → Power BI Desktop opens
 3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path **with a trailing slash**:
    - Windows: `C:\AI_Usage_Data\`
@@ -492,12 +465,11 @@ Required for the Behavioral Risk, Shadow AI, and User Drilldown pages.
 | Shadow AI page, unmanaged AI metrics | ✅ | ✅ |
 | Shadow AI Catalog (MDA) | Yellow callout + empty visuals | Yellow callout + populated visuals |
 | Benchmarks & Targets sliders | ✅ | ✅ |
-| Action Plan verdicts & scorecards | ✅ | ✅ |
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | "We couldn't find the file" on load | Folder path missing trailing slash | Add trailing `\` (Windows) or `/` (macOS) |
-| Pages 12/13/14 visuals blank but no yellow callout | Stub CSV missing | Create the header-only CSVs from Path A instructions |
+| Shadow AI Catalog (MDA) visuals blank but no yellow callout | Stub CSV missing | Create the header-only CSVs from Path A instructions |
 | All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_usage_graph.csv` from Purview Audit |
 | Weekly Days Used per User > 7 | Old PBIT version | Re-download the latest PBIT; the measure is hard-capped at 7 |
 | "Behavioral Risk" page empty | Missing MDE Plan 2 export | Re-export `ai_file_proximity.csv` and `ai_offhours_geo.csv` |
@@ -550,7 +522,7 @@ When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with rea
 
 **Architecture:** The v26 Unified PBIT replaces two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a single template that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly yellow overlay when the underlying data is empty. No conditional DAX logic is needed — empty CSVs simply produce empty visuals.
 
-**Tier model:** The report contains 15 pages total. Pages that work on E3+Copilot baseline: Executive Summary, Copilot Deep Dive, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets, Action Plan, Glossaries. Pages that need MDE Plan 2: Behavioral Risk, Shadow AI. MDA page: Shadow AI Catalog (MDA). Reference pages: Tier Comparison, Data Source, User Drilldown.
+**Tier model:** The report contains 10 pages total. Pages that work on E3+Copilot baseline: Executive Summary, Copilot Deep Dive, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets. Pages that need MDE Plan 2: Behavioral Risk, Shadow AI. MDA page: Shadow AI Catalog (MDA). Reference pages: Glossary & Data Dictionary, Tier Comparison.
 
 **Measures:** 122 total measures across 6 tables, including 5 interactive what-if parameter sliders, executive narrative verdicts, risk funnels, and department-level scatter quadrant analysis.
 
