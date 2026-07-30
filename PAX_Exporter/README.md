@@ -84,11 +84,19 @@ You'll run three scripts into the **same output folder**. Together they produce 
 
 ### Step 1 — Open PowerShell 7 in this folder
 
+Open **PowerShell 7** and run the `cd` command with the **full path** to the `PAX_Exporter` folder on your machine. The path depends on where you downloaded or cloned the repository.
+
+**Example — if you cloned to your Downloads folder:**
 ```powershell
-cd "PAX_Exporter"
+cd "C:\Users\YourName\Downloads\AI-Solutions-Intelligence-Dashboard\PAX_Exporter"
 ```
 
-(Use the full path to wherever you cloned the repo, ending in `\PAX_Exporter`.)
+**Example — if you cloned to your Desktop:**
+```powershell
+cd "C:\Users\YourName\Desktop\AI-Solutions-Intelligence-Dashboard\PAX_Exporter"
+```
+
+> Replace `YourName` with your Windows username and adjust the path to match wherever you saved the repository. When the command works, your prompt will end with `...\PAX_Exporter>`.
 
 ### Step 2 — Pick your date window
 

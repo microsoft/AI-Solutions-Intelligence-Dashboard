@@ -198,9 +198,14 @@ In your **PowerShell 7** window, change into the exporter folder, then run the t
 
 <small style='color:#666'>Tip: copy each single-line command below, paste it into PowerShell, then press Enter. For the Copilot usage collect, run `Connect-ExchangeOnline` interactively before the Purview command.</small>
 
+Open **PowerShell 7** and navigate to the `PAX_Exporter` folder using the **full path** to wherever you downloaded or cloned the repository:
+
 ```powershell
-cd "PAX_Exporter"
+# Replace YourName and the folder path to match where you saved the repo
+cd "C:\Users\YourName\Downloads\AI-Solutions-Intelligence-Dashboard\PAX_Exporter"
 ```
+
+> When the command works, your prompt will end with `...\PAX_Exporter>`. If you see a *"Cannot find path"* error, the path doesn't match — check the folder name and location and try again.
 
 ```powershell
 .\Invoke-AISolutionsExport.ps1 -TenantId <TENANT_ID> -ClientId <CLIENT_ID> -ClientSecret (Read-Host -AsSecureString 'Client secret') -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data'
