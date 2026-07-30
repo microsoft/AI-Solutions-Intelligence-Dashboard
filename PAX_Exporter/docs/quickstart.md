@@ -53,16 +53,25 @@ Replace every `<PLACEHOLDER>` with your real value:
 
 <small style='color:#666'>Tip: copy the single-line command below, paste it into PowerShell, then press Enter.</small>
 
+**Using an access token:**
 ```powershell
-.\Export-DefenderAdvancedHunting.ps1 -Query $kql -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputPath '<OUTPUT.csv>' -AccessToken '<YOUR_ACCESS_TOKEN>'
+.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>'
 ```
 
-Using an app registration instead of a token? Run the exporter and prompt for the secret in one line:
-
+**Using an app registration** — run Command 1 first (it will prompt you to type your secret), then Command 2:
 ```powershell
 $secret = Read-Host -AsSecureString 'Client secret'
-.\Export-DefenderAdvancedHunting.ps1 -Query $kql -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputPath '<OUTPUT.csv>' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
+.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
 ```
+
+| Placeholder | What to put there |
+|---|---|
+| `<START_DATE>` | Start of your date window, e.g. `2026-01-01` |
+| `<END_DATE>` | End of your date window (exclusive), e.g. `2026-07-01` |
+| `C:\AI_Usage_Data` | Folder where you want the 12 CSV files saved |
+| `<YOUR_ACCESS_TOKEN>` | The token you copied from Graph Explorer or Azure CLI |
+| `<TENANT_ID>` | Entra admin center → your app → **Directory (tenant) ID** |
+| `<CLIENT_ID>` | Entra admin center → your app → **Application (client) ID** |
 
 `-EndDate` is **exclusive** — `2026-06-08` means "up to but not including midnight on the 8th."
 

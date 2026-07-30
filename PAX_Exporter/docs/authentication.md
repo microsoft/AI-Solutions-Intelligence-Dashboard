@@ -23,16 +23,13 @@ An access token is a short-lived string that says "Graph, let me in." It's the f
 
 Whatever the identity behind the token is, it must hold **`ThreatHunting.Read.All`**.
 
-**Use it:**
+**Use it (single-line, paste directly into PowerShell):**
 
 ```powershell
-.\Export-DefenderAdvancedHunting.ps1 `
-    -Query      $kql `
-    -StartDate  '<START_DATE>' `
-    -EndDate    '<END_DATE>' `
-    -OutputPath '<OUTPUT.csv>' `
-    -AccessToken '<YOUR_ACCESS_TOKEN>'
+.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>'
 ```
+
+Replace `2026-01-01` / `2026-07-01` with your date window and `C:\AI_Usage_Data` with your data folder. Replace `<YOUR_ACCESS_TOKEN>` with the token you copied.
 
 > ⏱️ **Tokens expire after ~1 hour.** If a long export dies partway with a `401`, your token likely expired — get a fresh one and re-run. See [troubleshooting.md](troubleshooting.md).
 
@@ -53,20 +50,25 @@ An app registration is a reusable identity for unattended runs. Set it up once, 
 
 </details>
 
-**Use it (pass the secret securely, never inline):**
+**Use it — two commands, paste one at a time:**
 
+**Command 1** — prompts you to type your secret (nothing appears on screen as you type, that's normal):
 ```powershell
 $secret = Read-Host -AsSecureString 'Client secret'
-
-.\Export-DefenderAdvancedHunting.ps1 `
-    -Query      $kql `
-    -StartDate  '<START_DATE>' `
-    -EndDate    '<END_DATE>' `
-    -OutputPath '<OUTPUT.csv>' `
-    -TenantId   '<TENANT_ID>' `
-    -ClientId   '<CLIENT_ID>' `
-    -ClientSecret $secret
 ```
+
+**Command 2** — runs the full export (replace the four `<PLACEHOLDERS>` with your real values):
+```powershell
+.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
+```
+
+| Placeholder | Where to find it |
+|---|---|
+| `2026-01-01` / `2026-07-01` | Your reporting date window (change these dates) |
+| `C:\AI_Usage_Data` | The folder where you want the 12 CSV files saved |
+| `<TENANT_ID>` | Entra admin center → your app registration → **Directory (tenant) ID** |
+| `<CLIENT_ID>` | Entra admin center → your app registration → **Application (client) ID** |
+| `$secret` | Already set by Command 1 — do not replace this |
 
 `Read-Host -AsSecureString` keeps the secret out of your command history and off the screen. The tool acquires a token behind the scenes and never logs the secret or the token.
 
