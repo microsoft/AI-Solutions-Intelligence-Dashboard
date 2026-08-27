@@ -412,7 +412,7 @@ if ($projected.Count -gt 0) {
         userPrincipalName, displayName, department, jobTitle, city, country, `
         companyName, accountEnabled, userType, createdDateTime, hasLicense, `
         assignedLicenses, manager_displayName, manager_userPrincipalName |
-        Export-Csv -Path $entraPath -NoTypeInformation -Encoding UTF8 -UseQuotes AsNeeded
+        Export-Csv -Path $entraPath -NoTypeInformation -Encoding UTF8
 }
 else {
     Set-Content -Path $entraPath -Value $entraHeader -Encoding UTF8
@@ -541,7 +541,7 @@ else {
     if ($consentRows.Count -gt 0) {
         $consentRows | Select-Object `
             UPN, AppName, YearMonth, ConsentCount, LastConsent, PermissionWeight, Permissions |
-            Export-Csv -Path $consentsPath -NoTypeInformation -Encoding UTF8 -UseQuotes AsNeeded
+            Export-Csv -Path $consentsPath -NoTypeInformation -Encoding UTF8
     }
     else {
         Set-Content -Path $consentsPath -Value $consentsHeader -Encoding UTF8
@@ -631,7 +631,7 @@ else {
         $signinRows | Select-Object `
             UPN, Application, YearMonth, SignInCount, DistinctDays, IsGuest, `
             Countries, HasConditionalAccess, LastSignIn |
-            Export-Csv -Path $signinsPath -NoTypeInformation -Encoding UTF8 -UseQuotes AsNeeded
+            Export-Csv -Path $signinsPath -NoTypeInformation -Encoding UTF8
     }
     else {
         Set-Content -Path $signinsPath -Value $signinsHeader -Encoding UTF8
