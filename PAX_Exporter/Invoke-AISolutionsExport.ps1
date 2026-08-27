@@ -143,10 +143,10 @@ $ErrorActionPreference = 'Stop'
 # Order is the run order. UserBucketColumn is $null for non-bucketed presets.
 # ---------------------------------------------------------------------------
 $presetManifest = @(
-    [PSCustomObject]@{ Artifact = 'ai_activity_sessions.csv'; PresetFile = 'CloudAppEvents_ai_activity_sessions.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN' }
-    [PSCustomObject]@{ Artifact = 'ai_offhours_geo.csv';      PresetFile = 'AADSignInEventsBeta_ai_offhours_geo.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN' }
-    [PSCustomObject]@{ Artifact = 'ai_client_channel.csv';    PresetFile = 'DeviceNetworkEvents_ai_client_channel.kql'; PartitionMode = 'Month';    UserBucketColumn = $null }
-    [PSCustomObject]@{ Artifact = 'ai_file_proximity.csv';    PresetFile = 'DeviceNetworkEvents_ai_file_proximity.kql'; PartitionMode = 'Adaptive'; UserBucketColumn = $null }
+    [PSCustomObject]@{ Artifact = 'ai_activity_sessions.csv'; PresetFile = 'CloudAppEvents_ai_activity_sessions.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN';  HeaderRow = 'UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier' }
+    [PSCustomObject]@{ Artifact = 'ai_offhours_geo.csv';      PresetFile = 'AADSignInEventsBeta_ai_offhours_geo.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN';  HeaderRow = 'UPN,YearMonth,TotalSessions,OffHoursSessions,OffHoursPct,DistinctCountries,AnomalousCountryCount,AnomalousCountries' }
+    [PSCustomObject]@{ Artifact = 'ai_client_channel.csv';    PresetFile = 'DeviceNetworkEvents_ai_client_channel.kql'; PartitionMode = 'Month';    UserBucketColumn = $null;  HeaderRow = 'AISite,Channel,YearMonth,EventCount' }
+    [PSCustomObject]@{ Artifact = 'ai_file_proximity.csv';    PresetFile = 'DeviceNetworkEvents_ai_file_proximity.kql'; PartitionMode = 'Adaptive'; UserBucketColumn = $null;  HeaderRow = 'Timestamp,UPN,AISolution,YearMonth,FileName,FolderCategory,FolderPath,SecondsToAI,NameMatchesSensitivePattern,FolderMatchesSensitive' }
 )
 
 # ---------------------------------------------------------------------------
@@ -242,10 +242,25 @@ foreach ($p in $presetManifest) {
         $exporterArgs['ClientSecret'] = $ClientSecret
     }
 
-    $summary = & $exporter @exporterArgs
-
     $rows = 'unknown'
-    try { $rows = $summary.TotalRows } catch { }
+    $presetStatus = 'OK'
+    try {
+        $summary = & $exporter @exporterArgs
+        try { $rows = $summary.TotalRows } catch { }
+    }
+    catch {
+        # HTTP 400 means the table is not available in this tenant (e.g. no MDA/MDE license).
+        # Write a header-only stub so the dashboard still opens, then continue.
+        if ($_.Exception.Message -match 'HTTP 400|400.*Bad Request|Bad Request.*400') {
+            Write-Warning ("  preset SKIPPED (HTTP 400 - table not available in this tenant): {0} -> writing stub" -f $p.Artifact)
+            [System.IO.File]::WriteAllText($outPath, $p.HeaderRow + "`n", [System.Text.Encoding]::UTF8)
+            $rows = 0
+            $presetStatus = 'STUB-400'
+        }
+        else {
+            throw
+        }
+    }
 
     $bucketLabel = if ($p.UserBucketColumn) { $p.UserBucketColumn } else { '' }
     $presetResults.Add([PSCustomObject]@{
@@ -254,10 +269,12 @@ foreach ($p in $presetManifest) {
         PartitionMode    = $p.PartitionMode
         UserBucketColumn = $bucketLabel
         TotalRows        = $rows
-        Status           = 'OK'
+        Status           = $presetStatus
     })
 
-    Write-Host ("  preset OK: {0} ({1} rows)" -f $p.Artifact, $rows) -ForegroundColor Green
+    if ($presetStatus -eq 'OK') {
+        Write-Host ("  preset OK: {0} ({1} rows)" -f $p.Artifact, $rows) -ForegroundColor Green
+    }
 }
 
 # ---------------------------------------------------------------------------
