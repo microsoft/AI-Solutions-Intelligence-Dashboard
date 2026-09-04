@@ -92,7 +92,7 @@ catch {
 #       UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts,
 #       DistinctDevices, Category, RiskTier
 #   - Group-by keys `by UPN, AISolution, YearMonth`
-#   - Aggregations: dcount(bin(Timestamp, 1d)), dcount(DeviceType), countif(
+#   - Aggregations: dcount(bin(Timestamp, 1d)), dcount(DeviceKey), countif(
 # ===========================================================================
 Write-Host ""
 Write-Host "---- Case p2: exact aggregate schema (project + group-by + aggregations) ----" -ForegroundColor Cyan
@@ -101,7 +101,7 @@ try {
     $hasProject   = $presetRaw.Contains($expectedProject)
     $hasGroupBy   = $presetRaw.Contains('by UPN, AISolution, YearMonth')
     $hasActiveDay = $presetRaw.Contains('dcount(bin(Timestamp, 1d))')
-    $hasDevices   = $presetRaw.Contains('dcount(DeviceType)')
+    $hasDevices   = $presetRaw.Contains('dcount(DeviceKey)')
     $hasCountif   = $presetRaw.Contains('countif(')
     $passP2 = $hasProject -and $hasGroupBy -and $hasActiveDay -and $hasDevices -and $hasCountif
     Add-CaseResult -Name 'p2. exact aggregate schema (project column list + group-by + dcount/countif)' -Pass $passP2 `

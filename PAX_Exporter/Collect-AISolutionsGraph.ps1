@@ -6,9 +6,9 @@
     ai_solutions_catalog.csv (a static curated seed, create-if-missing).
 
 .DESCRIPTION
-    The AI Solutions dashboard (pbit) imports twelve CSVs. Four are produced by
+    The AI Solutions dashboard (pbit) imports thirteen CSVs. Four are produced by
     Defender Advanced Hunting (Export-DefenderAdvancedHunting.ps1) and three are
-    header-only MDA stubs (Invoke-AISolutionsExport.ps1). The remaining FIVE are
+    header-only MDA stubs (Invoke-AISolutionsExport.ps1). The remaining SIX are
     "Section A" -- sourced from Microsoft Graph / Entra / a static catalog, NOT
     from Advanced Hunting.
 
@@ -29,10 +29,12 @@
           $expand=manager($select=displayName,userPrincipalName)
         Pages are followed via @odata.nextLink until absent. Each raw user is
         projected to a fixed 14-column ordered record. Required delegated/app
-        Graph permissions (admin-consented): User.Read.All, Directory.Read.All.
+        Graph permissions (admin-consented): User.Read.All,
+        LicenseAssignment.Read.All, and AuditLog.Read.All. Directory.Read.All
+        can be used instead of LicenseAssignment.Read.All but is broader.
 
     A5 -- ai_solutions_catalog.csv (static curated seed):
-        A byte-exact header plus 20 curated rows. Written CREATE-IF-MISSING
+        A byte-exact header plus 23 curated rows. Written CREATE-IF-MISSING
         (never clobbered when a catalog already exists in -OutputDirectory),
         exactly like the MDA stub pattern in the orchestrator. -SkipCatalogSeed
         suppresses writing it entirely.
@@ -83,8 +85,9 @@
 
 .NOTES
     Requires PowerShell 7+. For real (non-mock) execution the identity used must
-    have admin-consented Microsoft Graph permissions User.Read.All and
-    Directory.Read.All. Returns a summary PSCustomObject (does NOT call exit).
+    have admin-consented Microsoft Graph permissions User.Read.All,
+    LicenseAssignment.Read.All, and AuditLog.Read.All. Returns a summary
+    PSCustomObject (does NOT call exit).
     REST + auth pattern mirrors Export-DefenderAdvancedHunting.ps1.
 #>
 [CmdletBinding()]
@@ -106,6 +109,8 @@ param(
 
     [datetime]$StartDate,
 
+    [datetime]$EndDate,
+
     [switch]$SkipConsents,
 
     [switch]$SkipSignins
@@ -121,12 +126,15 @@ $ErrorActionPreference = 'Stop'
 # A1 EntraUsers.csv -- byte-exact 14-column header (do not rename / reorder).
 $entraHeader = 'userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,hasLicense,assignedLicenses,manager_displayName,manager_userPrincipalName'
 
-# A5 ai_solutions_catalog.csv -- byte-exact header + 20 curated seed rows.
+# A5 ai_solutions_catalog.csv -- byte-exact header + curated seed rows.
 $catalogHeader = 'AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup'
 $catalogRows = @(
     'Microsoft 365 Copilot,Productivity,Microsoft,Sanctioned,Internal Only,Microsoft Copilot'
     'GitHub Copilot,Development,Microsoft,Sanctioned,Code Context,Microsoft Copilot'
     'Bing Chat Enterprise,Search,Microsoft,Sanctioned,Internal Only,Microsoft Copilot'
+    'Copilot Studio,Business Automation,Microsoft,Sanctioned,Internal Only,Microsoft Copilot'
+    'Security Copilot,Security AI,Microsoft,Sanctioned,Internal Only,Microsoft Copilot'
+    'ChatGPT,General AI,OpenAI,Conditional,Public Cloud,Licensed Third-Party'
     'ChatGPT Enterprise,General AI,OpenAI,Conditional,Org Managed,Licensed Third-Party'
     'ChatGPT Free,General AI,OpenAI,Unsanctioned,Public Cloud,Shadow AI'
     'ChatGPT Plus,General AI,OpenAI,Unsanctioned,Public Cloud,Shadow AI'
@@ -326,7 +334,7 @@ if (-not $useMock) {
         $resolvedToken = Get-GraphToken -Tenant $TenantId -Client $ClientId -Secret $ClientSecret
     }
     else {
-        throw "No credentials or test seam supplied. Provide -QueryExecutor (test), OR -AccessToken, OR -TenantId + -ClientId + -ClientSecret (app registration with Graph User.Read.All + Directory.Read.All + AuditLog.Read.All + Application.Read.All)."
+        throw "No credentials or test seam supplied. Provide -QueryExecutor (test), OR -AccessToken, OR -TenantId + -ClientId + -ClientSecret (app registration with Graph User.Read.All + LicenseAssignment.Read.All + AuditLog.Read.All)."
     }
 }
 
@@ -341,7 +349,7 @@ $invokeGraph = {
 # ----------------------------------------------------------------------------
 # A1 -- EntraUsers.csv (live Graph /users pull with @odata.nextLink pagination).
 # ----------------------------------------------------------------------------
-$selectClause = 'userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,assignedLicenses'
+$selectClause = 'id,userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,assignedLicenses'
 $expandClause = 'manager($select=displayName,userPrincipalName)'
 $usersUri = 'https://graph.microsoft.com/v1.0/users?$select=' + $selectClause + '&$expand=' + $expandClause
 
@@ -365,6 +373,40 @@ while (-not [string]::IsNullOrEmpty($uri)) {
     if ([string]::IsNullOrEmpty($next)) { $uri = $null } else { $uri = $next }
 }
 
+# Resolve assigned SKU ids to stable skuPartNumber values. The dashboard can
+# then identify Copilot licenses without hardcoding tenant-specific GUIDs.
+$assignedSkuIds = @(
+    $rawUsers |
+        ForEach-Object { @(Get-PropValue $_ 'assignedLicenses') } |
+        ForEach-Object { Get-PropValue $_ 'skuId' } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+        Select-Object -Unique
+)
+$skuPartNumberById = @{}
+if ($assignedSkuIds.Count -gt 0) {
+    $subscribedSkusUri = 'https://graph.microsoft.com/v1.0/subscribedSkus?$select=skuId,skuPartNumber'
+    $subscribedSkus = Invoke-GraphPaged -InitialUri $subscribedSkusUri -Invoker $invokeGraph
+    foreach ($subscribedSku in $subscribedSkus) {
+        $skuId = [string](Get-PropValue $subscribedSku 'skuId')
+        $skuPartNumber = [string](Get-PropValue $subscribedSku 'skuPartNumber')
+        if (-not [string]::IsNullOrWhiteSpace($skuId) -and -not [string]::IsNullOrWhiteSpace($skuPartNumber)) {
+            $skuPartNumberById[$skuId] = $skuPartNumber
+        }
+    }
+}
+
+# The sign-in resource does not expose userType. Keep id/UPN lookups from the
+# already collected users so guest status can be projected accurately.
+$userTypeById = @{}
+$userTypeByUpn = @{}
+foreach ($u in $rawUsers) {
+    $userId = [string](Get-PropValue $u 'id')
+    $userUpn = ([string](Get-PropValue $u 'userPrincipalName')).ToLowerInvariant()
+    $userType = [string](Get-PropValue $u 'userType')
+    if (-not [string]::IsNullOrWhiteSpace($userId)) { $userTypeById[$userId] = $userType }
+    if (-not [string]::IsNullOrWhiteSpace($userUpn)) { $userTypeByUpn[$userUpn] = $userType }
+}
+
 # Project each raw user to the fixed 14-column ordered record.
 $projected = [System.Collections.Generic.List[object]]::new()
 foreach ($u in $rawUsers) {
@@ -373,7 +415,11 @@ foreach ($u in $rawUsers) {
     if ($null -ne $assigned) {
         foreach ($lic in @($assigned)) {
             $sku = Get-PropValue $lic 'skuId'
-            if ($null -ne $sku -and [string]$sku -ne '') { $skuList.Add([string]$sku) }
+            if ($null -ne $sku -and [string]$sku -ne '') {
+                $skuId = [string]$sku
+                $skuName = if ($skuPartNumberById.ContainsKey($skuId)) { $skuPartNumberById[$skuId] } else { $skuId }
+                $skuList.Add($skuName)
+            }
         }
     }
     $hasLicense = if ($skuList.Count -ge 1) { 'TRUE' } else { 'FALSE' }
@@ -439,17 +485,24 @@ else {
 Write-Progress-Log ("  A5 ai_solutions_catalog.csv: {0}" -f $catalogStatus) ([ConsoleColor]::Cyan)
 
 # ----------------------------------------------------------------------------
-# Shared audit-log time lower bound. When -StartDate is not bound, default to
-# the last 180 days. Formatted as a UTC ISO 8601 'Z' string for the $filter.
+# Shared audit-log time bounds. When unbound, default to the last 180 days
+# through now. Formatted as UTC ISO 8601 'Z' strings for Graph filters.
 # ----------------------------------------------------------------------------
 if (-not $PSBoundParameters.ContainsKey('StartDate')) {
     $StartDate = (Get-Date).AddDays(-180)
 }
+if (-not $PSBoundParameters.ContainsKey('EndDate')) {
+    $EndDate = Get-Date
+}
+if ($EndDate -le $StartDate) {
+    throw 'EndDate must be later than StartDate.'
+}
 $startIso = $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+$endIso = $EndDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 # ----------------------------------------------------------------------------
 # A3 -- ai_oauth_consents.csv (Graph auditLogs/directoryAudits, AI-filtered).
-#   Required app permissions: AuditLog.Read.All, Application.Read.All.
+#   Required app permission: AuditLog.Read.All.
 # ----------------------------------------------------------------------------
 $consentsHeader = 'UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions'
 if ($SkipConsents) {
@@ -457,7 +510,7 @@ if ($SkipConsents) {
     $consentsRowCount = 0
 }
 else {
-    $consentsFilter = "activityDisplayName eq 'Consent to application' and activityDateTime ge $startIso"
+    $consentsFilter = "activityDisplayName eq 'Consent to application' and activityDateTime ge $startIso and activityDateTime lt $endIso"
     $consentsUri = 'https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?$filter=' +
         [uri]::EscapeDataString($consentsFilter) +
         '&$select=activityDateTime,activityDisplayName,targetResources,initiatedBy'
@@ -553,7 +606,8 @@ Write-Progress-Log ("  A3 ai_oauth_consents.csv: {0} ({1} row(s))" -f $consentsS
 
 # ----------------------------------------------------------------------------
 # A4 -- ai_sso_signins.csv (Graph auditLogs/signIns, AI-filtered, successes).
-#   Required app permissions: AuditLog.Read.All, Directory.Read.All.
+#   Required app permission: AuditLog.Read.All. User.Read.All is already used
+#   for EntraUsers and supplies the userType lookup used for guest classification.
 # ----------------------------------------------------------------------------
 $signinsHeader = 'UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn'
 if ($SkipSignins) {
@@ -561,10 +615,10 @@ if ($SkipSignins) {
     $signinsRowCount = 0
 }
 else {
-    $signinsFilter = "createdDateTime ge $startIso"
+    $signinsFilter = "createdDateTime ge $startIso and createdDateTime lt $endIso"
     $signinsUri = 'https://graph.microsoft.com/v1.0/auditLogs/signIns?$filter=' +
         [uri]::EscapeDataString($signinsFilter) +
-        '&$select=userPrincipalName,appDisplayName,createdDateTime,location,userType,conditionalAccessStatus,status'
+        '&$select=userId,userPrincipalName,appDisplayName,createdDateTime,location,conditionalAccessStatus,status'
 
     $rawSignins = Invoke-GraphPaged -InitialUri $signinsUri -Invoker $invokeGraph
 
@@ -586,8 +640,17 @@ else {
         $location = Get-PropValue $rec 'location'
         $country = ConvertTo-CsvField (Get-PropValue $location 'countryOrRegion')
 
-        $userType = Get-PropValue $rec 'userType'
-        $isGuest = if ($userType -eq 'Guest') { 'TRUE' } else { 'FALSE' }
+        $userId = [string](Get-PropValue $rec 'userId')
+        $userType = if (-not [string]::IsNullOrWhiteSpace($userId) -and $userTypeById.ContainsKey($userId)) {
+            $userTypeById[$userId]
+        }
+        elseif ($userTypeByUpn.ContainsKey($upn)) {
+            $userTypeByUpn[$upn]
+        }
+        else {
+            ''
+        }
+        $isGuest = if ($userType -eq 'Guest' -or $upn -like '*#ext#*') { 'TRUE' } else { 'FALSE' }
 
         $caStatus = Get-PropValue $rec 'conditionalAccessStatus'
         $hasCA = if ($caStatus -eq 'success') { 'TRUE' } else { 'FALSE' }

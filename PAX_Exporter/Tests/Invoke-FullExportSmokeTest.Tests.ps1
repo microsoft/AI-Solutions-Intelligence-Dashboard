@@ -18,7 +18,7 @@
     fixed Get-Random -SetSeed).
 
     Cases:
-      h1. Happy path: all three mock seams produce all 12 CSVs with the exact
+      h1. Happy path: all three mock seams produce all 13 CSVs with the exact
           manifest headers -> child exit 0 and a PASS verdict.
       h2. Missing file: after a good mocked run, delete one CSV, re-validate
           with -SkipOrchestration -> child exit 1 and that file flagged MISSING.
@@ -37,9 +37,9 @@ $null = Get-Random -SetSeed 20260725
 $harnessPath = Join-Path $PSScriptRoot '..\Invoke-FullExportSmokeTest.ps1'
 $harnessPath = (Resolve-Path $harnessPath).Path
 
-# The twelve dashboard artifacts (used for existence checks in the test).
+# The thirteen dashboard artifacts (used for existence checks in the test).
 $allArtifacts = @(
-    'EntraUsers.csv','ai_copilot_usage_graph.csv','ai_oauth_consents.csv',
+    'EntraUsers.csv','ai_copilot_usage_graph.csv','ai_copilot_surface_usage.csv','ai_oauth_consents.csv',
     'ai_sso_signins.csv','ai_solutions_catalog.csv','ai_appgov_alerts.csv',
     'ai_cloud_discovery.csv','ai_mda_sessions.csv','ai_activity_sessions.csv',
     'ai_offhours_geo.csv','ai_client_channel.csv','ai_file_proximity.csv'
@@ -65,7 +65,7 @@ function New-TempOutDir {
 
 # ---------------------------------------------------------------------------
 # Runner script (written once). Defines the three credential-free mock seams
-# and invokes the harness with them so all twelve CSVs are produced. The mocks
+# and invokes the harness with them so all thirteen CSVs are produced. The mocks
 # mirror Invoke-AISolutionsExport.Tests.ps1 case c6, except the Defender AH mock
 # is KQL-dispatched to return each preset's EXACT terminal-projection columns so
 # the produced Defender CSVs carry the byte-exact (quote-all) headers.
@@ -88,7 +88,7 @@ $ahMock = {
     if ($kql.Contains('CloudAppEvents')) {
         return @([pscustomobject]@{ UPN='u@x'; AISolution='ChatGPT'; YearMonth='2026-05'; Sessions=3; ActiveDays=2; EstimatedPrompts=5; DistinctDevices=1; Category='General AI'; RiskTier='Conditional' })
     }
-    if ($kql.Contains('AADSignInEventsBeta')) {
+    if ($kql.Contains('EntraIdSignInEvents')) {
         return @([pscustomobject]@{ UPN='u@x'; YearMonth='2026-05'; TotalSessions=4; OffHoursSessions=1; OffHoursPct=0.25; DistinctCountries=1; AnomalousCountryCount=0; AnomalousCountries='' })
     }
     if ($kql.Contains('DeviceFileEvents')) {
@@ -124,7 +124,7 @@ $graphMock = {
 $purviewMock = {
     param($ctx)
     if ($ctx.Page -eq 0) {
-        $rec = [pscustomobject]@{ UserId='a@x'; CreationDate='2026-05-04T10:00:00Z'; Workload='Word' }
+        $rec = [pscustomobject]@{ UserId='a@x'; CreationTime='2026-05-04T10:00:00Z'; Workload='Word' }
         return @([pscustomobject]@{ AuditData = ($rec | ConvertTo-Json -Compress -Depth 5) })
     }
     return @()
@@ -139,7 +139,7 @@ $purviewMock = {
 $runnerPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ah_fex_runner_{0}.ps1" -f ([guid]::NewGuid().ToString('N')))
 Set-Content -LiteralPath $runnerPath -Value $runnerScript -Encoding UTF8
 
-# Run the mock-driven runner (produces all 12 CSVs) as a child pwsh process.
+# Run the mock-driven runner (produces all 13 CSVs) as a child pwsh process.
 function Invoke-MockedRun {
     param([string]$OutputDirectory)
     $out = & pwsh -NoProfile -File $runnerPath -HarnessPath $harnessPath -OutputDirectory $OutputDirectory 2>&1 | Out-String
@@ -155,7 +155,7 @@ function Invoke-Harness {
 
 try {
     # =======================================================================
-    # CASE h1. Happy path -- all three seams -> all 12 CSVs, byte-exact -> 0.
+    # CASE h1. Happy path -- all three seams -> all 13 CSVs, byte-exact -> 0.
     # =======================================================================
     Write-Host ""
     Write-Host "---- Case h1: mocked full run -> exit 0 + PASS verdict ----" -ForegroundColor Cyan
@@ -165,11 +165,11 @@ try {
         $allExist = $true
         foreach ($f in $allArtifacts) { if (-not (Test-Path (Join-Path $outH1 $f))) { $allExist = $false } }
         $passH1 = ($r.Code -eq 0) -and ($r.Out -match 'FULL-EXPORT SMOKE TEST: PASS') -and $allExist
-        Add-CaseResult -Name 'h1. mocked full run exits 0 with PASS verdict and all 12 CSVs present' -Pass $passH1 `
+        Add-CaseResult -Name 'h1. mocked full run exits 0 with PASS verdict and all 13 CSVs present' -Pass $passH1 `
             -Detail ("code={0}; allExist={1}" -f $r.Code, $allExist)
     }
     catch {
-        Add-CaseResult -Name 'h1. mocked full run exits 0 with PASS verdict and all 12 CSVs present' -Pass $false -Detail "threw: $($_.Exception.Message)"
+        Add-CaseResult -Name 'h1. mocked full run exits 0 with PASS verdict and all 13 CSVs present' -Pass $false -Detail "threw: $($_.Exception.Message)"
     }
 
     # =======================================================================

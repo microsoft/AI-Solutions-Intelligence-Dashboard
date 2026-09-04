@@ -1,6 +1,6 @@
-# PAX Exporter — get all 12 AI Solutions dashboard files
+# PAX Exporter — get all 13 AI Solutions dashboard files
 
-This tool collects the **twelve CSV files** the AI Solutions Intelligence Dashboard (`.pbit`) needs, straight from your Microsoft 365 tenant. It is the automated path for organizations with **more than ~10,000 rows** of AI activity (the manual portal-export path hits a 10,000-row wall).
+This tool collects the **thirteen CSV files** the AI Solutions Intelligence Dashboard (`.pbit`) needs, straight from your Microsoft 365 tenant. It is the automated path for organizations with **more than ~10,000 rows** of AI activity (the manual portal-export path hits a 10,000-row wall).
 
 > **TL;DR:** run three short PowerShell commands, point the dashboard at the output folder, done. No coding required.
 
@@ -10,26 +10,49 @@ This tool collects the **twelve CSV files** the AI Solutions Intelligence Dashbo
 
 ## What this produces
 
-The dashboard imports twelve CSVs. Here is exactly where each one comes from:
+The dashboard imports thirteen CSVs. Here is exactly where each one comes from:
 
 | # | File | Produced by | What it needs |
 | --- | --- | --- | --- |
-| 1 | EntraUsers.csv | `Collect-AISolutionsGraph.ps1` | User.Read.All, Directory.Read.All |
+| 1 | EntraUsers.csv | `Collect-AISolutionsGraph.ps1` | User.Read.All, LicenseAssignment.Read.All |
 | 2 | ai_copilot_usage_graph.csv | `Collect-AICopilotUsage.ps1` | Exchange Online sign-in (see prereqs) |
-| 3 | ai_activity_sessions.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
-| 4 | ai_oauth_consents.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All, Application.Read.All |
-| 5 | ai_sso_signins.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All, Directory.Read.All |
-| 6 | ai_file_proximity.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
-| 7 | ai_offhours_geo.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
-| 8 | ai_solutions_catalog.csv | `Collect-AISolutionsGraph.ps1` (auto-seeded) | nothing — review & customize |
-| 9 | ai_client_channel.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
-| 10 | ai_appgov_alerts.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
-| 11 | ai_cloud_discovery.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
-| 12 | ai_mda_sessions.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
+| 3 | ai_copilot_surface_usage.csv | `Collect-AICopilotUsage.ps1` | Exchange Online sign-in (see prereqs) |
+| 4 | ai_activity_sessions.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All + `CloudAppEvents` (Defender for Cloud Apps) |
+| 5 | ai_oauth_consents.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All |
+| 6 | ai_sso_signins.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All |
+| 7 | ai_file_proximity.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
+| 8 | ai_offhours_geo.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
+| 9 | ai_solutions_catalog.csv | `Collect-AISolutionsGraph.ps1` (auto-seeded) | nothing — review & customize |
+| 10 | ai_client_channel.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
+| 11 | ai_appgov_alerts.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
+| 12 | ai_cloud_discovery.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
+| 13 | ai_mda_sessions.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
 
-**Files 10–12** are written as **empty placeholder files** (header row only) so the dashboard always opens, even if you don't have Microsoft Defender for Cloud Apps (MDA). If you *do* have MDA data, drop your real CSVs into the output folder with those exact names and the tool will leave them untouched. See [How the MDA files work](#how-the-mda-files-work) below.
+**Files 11–13** are written as **empty placeholder files** (header row only) so the dashboard always opens, even if you don't have Microsoft Defender for Cloud Apps (MDA). If you *do* have MDA data, drop your real CSVs into the output folder with those exact names and the tool will leave them untouched. See [How the MDA files work](#how-the-mda-files-work) below.
 
-**File 8** (`ai_solutions_catalog.csv`) is your list of known AI tools. The tool writes a ready-to-use starter version for you — you can edit it. See [The AI solutions catalog](#the-ai-solutions-catalog).
+**File 9** (`ai_solutions_catalog.csv`) is your list of known AI tools. The tool writes a ready-to-use starter version for you — you can edit it. See [The AI solutions catalog](#the-ai-solutions-catalog).
+
+### Exact CSV contracts
+
+The first row of every file must match exactly. The collectors enforce these headers and also write them when a query returns zero rows.
+
+| File | Exact header |
+| --- | --- |
+| `EntraUsers.csv` | `userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,hasLicense,assignedLicenses,manager_displayName,manager_userPrincipalName` |
+| `ai_copilot_usage_graph.csv` | `UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate` |
+| `ai_copilot_surface_usage.csv` | `UserPrincipalName,YearMonth,Surface,SourceWorkload,SourceAppHost,PromptCount,ActiveDays,LastActivityDate` |
+| `ai_activity_sessions.csv` | `UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier` |
+| `ai_oauth_consents.csv` | `UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions` |
+| `ai_sso_signins.csv` | `UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn` |
+| `ai_file_proximity.csv` | `Timestamp,UPN,AISolution,YearMonth,FileName,FolderCategory,FolderPath,SecondsToAI,NameMatchesSensitivePattern,FolderMatchesSensitive` |
+| `ai_offhours_geo.csv` | `UPN,YearMonth,TotalSessions,OffHoursSessions,OffHoursPct,DistinctCountries,AnomalousCountryCount,AnomalousCountries` |
+| `ai_solutions_catalog.csv` | `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup` |
+| `ai_client_channel.csv` | `AISite,Channel,YearMonth,EventCount` |
+| `ai_appgov_alerts.csv` | `Timestamp,YearMonth,UPN,AppName,AlertType,Severity,Description` |
+| `ai_cloud_discovery.csv` | `AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,TransactionCount,DistinctUsers,SanctionStatus` |
+| `ai_mda_sessions.csv` | `Timestamp,YearMonth,UPN,AppName,ActionType,PolicyHit,PolicyAction,IPAddress,CountryCode,EventCount` |
+
+For populated `ai_mda_sessions.csv` rows, `PolicyHit` must be `TRUE` or `FALSE`, and `PolicyAction` must be `Allow`, `Warn`, or `Block`.
 
 ---
 
@@ -61,8 +84,9 @@ If asked to trust the PSGallery repository, answer **Y**. You only do this once.
 The identity you sign in with must have these Microsoft Graph permissions, all admin-consented:
 
 ThreatHunting.Read.All — files 3, 6, 7, 9 (Defender Advanced Hunting)
-User.Read.All and Directory.Read.All — file 1 (users)
-AuditLog.Read.All and Application.Read.All — files 4 and 5 (consents, sign-ins)
+User.Read.All — file 1 (users and managers)
+LicenseAssignment.Read.All — file 1 (resolves license GUIDs to `skuPartNumber`; broader Directory.Read.All also works)
+AuditLog.Read.All — files 4 and 5 (consents and sign-ins)
 For file #2 (Copilot usage) you also need an account that can run Exchange Online audit search
 
 ### 4. How you'll sign in (pick one)
@@ -80,7 +104,7 @@ Full walk-throughs for both are in [docs/authentication.md](docs/authentication.
 
 ## Run it — step by step
 
-You'll run three scripts into the **same output folder**. Together they produce all twelve files.
+You'll run three scripts into the **same output folder**. Together they produce all thirteen files.
 
 ### Step 1 — Open PowerShell 7 in this folder
 
@@ -100,13 +124,15 @@ cd "C:\Users\YourName\Desktop\AI-Solutions-Intelligence-Dashboard\PAX_Exporter"
 
 ### Step 2 — Pick your date window
 
-Decide the start and end of the period you want to report on, for example the last six months. Dates are written `YYYY-MM-DD`. The end date is **exclusive** (not included).
+Decide the start and end of the period you want to report on. Dates are written `YYYY-MM-DD`; the end date is **exclusive**. Native Defender Advanced Hunting commonly exposes about 30 days of data, while Entra and Purview retention depends on licensing and policy. A larger requested range does not recover data that the source no longer retains.
+
+> `ai_activity_sessions.csv` uses `CloudAppEvents`, which requires Defender for Cloud Apps data in Advanced Hunting. MDE Plan 2 alone provides the device-event tables used by files 7 and 10, but not `CloudAppEvents`.
 
 ### Step 3 — Get your Graph credentials ready
 
 Follow [docs/authentication.md](docs/authentication.md) to either grab an **access token** or set up an **app registration**. Keep the values handy for the commands below. The examples use `<PLACEHOLDERS>` — replace them with your real values.
 
-### Step 4 — Files 3, 6, 7, 9 (+ the 3 placeholders): Defender Advanced Hunting
+### Step 4 — Files 4, 7, 8, 10 (+ the 3 placeholders): Defender Advanced Hunting
 
 Using an access token:
 
@@ -123,7 +149,7 @@ $secret = Read-Host -AsSecureString 'Client secret'
 
 This writes the four Defender files plus the three MDA placeholder files into `.\dashboard_data`. You'll see progress as each time window is queried.
 
-### Step 5 — Files 1, 4, 5, 8: Microsoft Graph
+### Step 5 — Files 1, 5, 6, 9: Microsoft Graph
 
 Same folder, same credentials:
 
@@ -135,7 +161,7 @@ Same folder, same credentials:
 
 This writes `EntraUsers.csv`, `ai_oauth_consents.csv`, `ai_sso_signins.csv`, and — if one isn't already there — a starter `ai_solutions_catalog.csv`.
 
-### Step 6 — File 2: Copilot usage (Microsoft Purview)
+### Step 6 — Files 2 and 3: Copilot usage (Microsoft Purview)
 
 This one signs in to Exchange Online interactively:
 
@@ -144,7 +170,9 @@ Connect-ExchangeOnline
 .\Collect-AICopilotUsage.ps1 -OutputDirectory '.\dashboard_data'
 ```
 
-A sign-in window appears; complete it. The script then writes `ai_copilot_usage_graph.csv`.
+A sign-in window appears; complete it. The script then writes `ai_copilot_usage_graph.csv` and `ai_copilot_surface_usage.csv`. The legacy file keeps the original fixed columns for compatibility, while the normalized file retains every surface reported through `AppHost` or `Workload`, including new workloads not known when the template was built.
+
+Purview audit search sessions return at most 50,000 records per date window. The collector can exceed 50,000 records overall by discarding saturated results and recursively splitting the window into non-overlapping halves. If a one-minute window still reaches the ceiling, it throws instead of silently truncating data.
 
 ### Step 7 — Review the AI solutions catalog
 
@@ -152,7 +180,7 @@ Open `.\dashboard_data\ai_solutions_catalog.csv` and adjust it to your organizat
 
 ### Step 8 — Open the dashboard
 
-Open the dashboard `.pbit` in Power BI Desktop and point it at your `dashboard_data` folder. All twelve files are there.
+Open the dashboard `.pbit` in Power BI Desktop and point it at your `dashboard_data` folder. All thirteen files are there.
 
 > **Tip:** if a file comes back empty because there was no matching activity in your window, that's expected — the dashboard still loads. Choose a window you know has AI activity for the richest results.
 
@@ -160,7 +188,7 @@ Open the dashboard `.pbit` in Power BI Desktop and point it at your `dashboard_d
 
 ## The AI solutions catalog
 
-`ai_solutions_catalog.csv` is the one file that describes *your* AI landscape — which tools are approved and which are shadow IT. Step 5 writes a starter version with 20 common tools so you're never staring at a blank file.
+`ai_solutions_catalog.csv` is the one file that describes *your* AI landscape — which tools are approved and which are shadow IT. Step 5 writes a starter version with 23 common tools so you're never staring at a blank file.
 
 Its columns are:
 
@@ -227,12 +255,12 @@ More detail:
 ```
 PAX_Exporter/
 ├── README.md                          ← you are here
-├── Invoke-AISolutionsExport.ps1       ← Defender files 3,6,7,9 + MDA placeholders 10–12
-├── Collect-AISolutionsGraph.ps1       ← Graph files 1,4,5 + catalog seed 8
-├── Collect-AICopilotUsage.ps1         ← Purview file 2 (Copilot usage)
+├── Invoke-AISolutionsExport.ps1       ← Defender files 4,7,8,10 + MDA placeholders 11–13
+├── Collect-AISolutionsGraph.ps1       ← Graph files 1,5,6 + catalog seed 9
+├── Collect-AICopilotUsage.ps1         ← Purview files 2–3 (wide + normalized Copilot usage)
 ├── Export-DefenderAdvancedHunting.ps1 ← low-level single-query exporter (called by the orchestrator)
 ├── Invoke-SmokeTest.ps1               ← validation harness (Defender path)
-├── Invoke-FullExportSmokeTest.ps1     ← validation harness (all 12 files)
+├── Invoke-FullExportSmokeTest.ps1     ← validation harness (all 13 files)
 ├── LICENSE                            ← MIT
 ├── SECURITY.md                        ← reporting + data-handling
 ├── .gitignore                         ← keeps exported data/secrets out of git
@@ -244,7 +272,7 @@ PAX_Exporter/
 │   ├── presets-and-kql.md
 │   └── troubleshooting.md
 ├── presets/
-│   ├── AADSignInEventsBeta_ai_offhours_geo.kql
+│   ├── EntraIdSignInEvents_ai_offhours_geo.kql
 │   ├── CloudAppEvents_ai_activity_sessions.kql
 │   ├── DeviceNetworkEvents_ai_client_channel.kql
 │   └── DeviceNetworkEvents_ai_file_proximity.kql
@@ -258,4 +286,3 @@ PAX_Exporter/
 Licensed under the [MIT License](LICENSE) — Copyright (c) Microsoft Corporation.
 
 Built on the time-slicing approach from the Microsoft PAX project (MIT).
-

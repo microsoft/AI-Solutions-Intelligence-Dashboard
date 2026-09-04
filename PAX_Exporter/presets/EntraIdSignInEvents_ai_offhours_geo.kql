@@ -1,4 +1,4 @@
-// AADSignInEventsBeta_ai_offhours_geo.kql
+// EntraIdSignInEvents_ai_offhours_geo.kql
 //
 // Advanced Hunting preset for the dashboard artifact `ai_offhours_geo.csv`.
 //
@@ -11,7 +11,7 @@
 // partition mode so per-user monthly dcount() values stay EXACT:
 //
 //   .\Export-DefenderAdvancedHunting.ps1 `
-//       -Query (Get-Content .\presets\AADSignInEventsBeta_ai_offhours_geo.kql -Raw) `
+//       -Query (Get-Content .\presets\EntraIdSignInEvents_ai_offhours_geo.kql -Raw) `
 //       -PartitionMode Month -TimeColumn Timestamp -UserBucketColumn UPN `
 //       -StartDate '2026-01-01' -EndDate '2026-07-01' `
 //       -OutputPath .\ai_offhours_geo.csv -AccessToken $env:GRAPH_TOKEN
@@ -54,7 +54,7 @@ let AIAppNames = dynamic([
 ]);
 // Step 1: Identify AI-related sign-ins
 let AISignIns =
-    AADSignInEventsBeta
+    EntraIdSignInEvents
     | where {TIMEFILTER}
     | where ErrorCode == 0  // successful sign-ins only
     | where Application has_any (AIAppNames)

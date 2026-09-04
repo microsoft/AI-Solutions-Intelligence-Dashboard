@@ -138,6 +138,14 @@ Write-Host "---- Case a3: license projection (hasLicense / assignedLicenses) ---
 try {
     $a3Mock = {
         param($ctx)
+        if ([string]$ctx.Uri -like '*subscribedSkus*') {
+            return [pscustomobject]@{
+                value = @(
+                    [pscustomobject]@{ skuId = 's1'; skuPartNumber = 'Microsoft_365_Copilot' },
+                    [pscustomobject]@{ skuId = 's2'; skuPartNumber = 'SPE_E5' }
+                )
+            }
+        }
         [pscustomobject]@{
             value = @(
                 [pscustomobject]@{
@@ -159,10 +167,10 @@ try {
     $licRow = $rows | Where-Object { $_.userPrincipalName -eq 'lic@x' }
     $noRow  = $rows | Where-Object { $_.userPrincipalName -eq 'nolic@x' }
 
-    $licOk = ($licRow.hasLicense -eq 'TRUE') -and ($licRow.assignedLicenses -eq 's1;s2')
+    $licOk = ($licRow.hasLicense -eq 'TRUE') -and ($licRow.assignedLicenses -eq 'Microsoft_365_Copilot;SPE_E5')
     $noOk  = ($noRow.hasLicense -eq 'FALSE') -and ($noRow.assignedLicenses -eq '')
     $passA3 = $licOk -and $noOk
-    Add-CaseResult -Name 'a3. license projection (TRUE/s1;s2 and FALSE/empty)' -Pass $passA3 `
+    Add-CaseResult -Name 'a3. license projection resolves SKU part numbers' -Pass $passA3 `
         -Detail ("lic(hasLic={0},skus='{1}'); nolic(hasLic={2},skus='{3}')" -f $licRow.hasLicense, $licRow.assignedLicenses, $noRow.hasLicense, $noRow.assignedLicenses)
 }
 catch {
@@ -218,7 +226,7 @@ try {
         [pscustomobject]@{ value = @() }
     }.GetNewClosure()
 
-    # First run: catalog created with exact header + 20 data rows.
+    # First run: catalog created with exact header + 23 data rows.
     $outA5 = New-TempOutDir 'a5'
     & $scriptPath -OutputDirectory $outA5 -QueryExecutor $a5Mock -SkipConsents -SkipSignins -WarningAction SilentlyContinue | Out-Null
 
@@ -226,7 +234,7 @@ try {
     $lines = @(Get-Content -LiteralPath $catalogPath | Where-Object { $_.Trim().Length -gt 0 })
     $headerOk = ($lines.Count -gt 0) -and ($lines[0] -ceq $expectedCatalogHeader)
     $dataRows = $lines.Count - 1
-    $countOk = ($lines.Count -eq 21) -and ($dataRows -eq 20)
+    $countOk = ($lines.Count -eq 24) -and ($dataRows -eq 23)
 
     # Second run in a fresh dir with a pre-seeded DIFFERENT-content catalog.
     $outA5b = New-TempOutDir 'a5b'
@@ -238,11 +246,11 @@ try {
     $nonClobber = $afterContent.Contains('MyCustomSolution')
 
     $passA5 = $headerOk -and $countOk -and $nonClobber
-    Add-CaseResult -Name 'a5. catalog seed create-if-missing (20 rows, header exact, non-clobber)' -Pass $passA5 `
+    Add-CaseResult -Name 'a5. catalog seed create-if-missing (23 rows, header exact, non-clobber)' -Pass $passA5 `
         -Detail ("headerOk={0}; lines={1}; dataRows={2}; nonClobber={3}" -f $headerOk, $lines.Count, $dataRows, $nonClobber)
 }
 catch {
-    Add-CaseResult -Name 'a5. catalog seed create-if-missing (20 rows, header exact, non-clobber)' -Pass $false -Detail "threw: $($_.Exception.Message)"
+    Add-CaseResult -Name 'a5. catalog seed create-if-missing (23 rows, header exact, non-clobber)' -Pass $false -Detail "threw: $($_.Exception.Message)"
 }
 
 # ===========================================================================
@@ -368,44 +376,53 @@ Write-Host "---- Case b3: A4 header + filter + aggregation ----" -ForegroundColo
 try {
     $b3Signins = [System.Collections.Generic.List[object]]::new()
     $b3Signins.Add([pscustomobject]@{
-        userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
+        userId = 'guest-id'; userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
         createdDateTime = '2026-05-01T08:00:00Z'; location = [pscustomobject]@{ countryOrRegion = 'US' }
-        userType = 'Member'; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = 0 }
+        conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = 0 }
     })
     $b3Signins.Add([pscustomobject]@{
-        userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
+        userId = 'guest-id'; userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
         createdDateTime = '2026-05-02T09:00:00Z'; location = [pscustomobject]@{ countryOrRegion = 'US' }
-        userType = 'Member'; conditionalAccessStatus = 'notApplied'; status = [pscustomobject]@{ errorCode = 0 }
+        conditionalAccessStatus = 'notApplied'; status = [pscustomobject]@{ errorCode = 0 }
     })
     $b3Signins.Add([pscustomobject]@{
-        userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
+        userId = 'guest-id'; userPrincipalName = 'B3User@X'; appDisplayName = 'OpenAI ChatGPT'
         createdDateTime = '2026-05-03T09:00:00Z'; location = [pscustomobject]@{ countryOrRegion = 'US' }
-        userType = 'Member'; conditionalAccessStatus = 'failure'; status = [pscustomobject]@{ errorCode = 50126 }
+        conditionalAccessStatus = 'failure'; status = [pscustomobject]@{ errorCode = 50126 }
     })
     $b3Signins.Add([pscustomobject]@{
-        userPrincipalName = 'B3User@X'; appDisplayName = 'Acme HR'
+        userId = 'guest-id'; userPrincipalName = 'B3User@X'; appDisplayName = 'Acme HR'
         createdDateTime = '2026-05-04T09:00:00Z'; location = [pscustomobject]@{ countryOrRegion = 'US' }
-        userType = 'Member'; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = 0 }
+        conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = 0 }
     })
+    $b3Uris = [System.Collections.Generic.List[string]]::new()
     $b3Mock = {
         param($ctx)
         $u = [string]$ctx.Uri
+        $b3Uris.Add($u)
         if ($u -like '*auditLogs/signIns*') { return [pscustomobject]@{ value = $b3Signins.ToArray() } }
+        if ($u -like '*/users?*') {
+            return [pscustomobject]@{ value = @([pscustomobject]@{ id='guest-id'; userPrincipalName='B3User@X'; userType='Guest' }) }
+        }
         return [pscustomobject]@{ value = @() }
     }.GetNewClosure()
 
     $outB3 = New-TempOutDir 'b3'
-    & $scriptPath -OutputDirectory $outB3 -QueryExecutor $b3Mock -SkipCatalogSeed -SkipConsents -WarningAction SilentlyContinue | Out-Null
+    & $scriptPath -OutputDirectory $outB3 -QueryExecutor $b3Mock -SkipCatalogSeed -SkipConsents `
+        -StartDate ([datetime]'2026-05-01T00:00:00Z') -EndDate ([datetime]'2026-06-01T00:00:00Z') `
+        -WarningAction SilentlyContinue | Out-Null
 
     $signinsPath = Join-Path $outB3 'ai_sso_signins.csv'
     $expectedSigninsHeader = 'UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn'
     $firstLine = (Get-Content -LiteralPath $signinsPath)[0]
     $rows = @(Import-Csv -LiteralPath $signinsPath)
     $row = $rows | Where-Object { $_.Application -eq 'OpenAI ChatGPT' }
+    $boundedUri = @($b3Uris | Where-Object { $_ -like '*auditLogs/signIns*' -and $_ -match 'createdDateTime%20lt%202026-06-01' }).Count -eq 1
     $passB3 = ($firstLine -ceq $expectedSigninsHeader) -and ($rows.Count -eq 1) -and ($null -ne $row) -and `
-              ([int]$row.SignInCount -eq 2) -and ([int]$row.DistinctDays -eq 2) -and ($row.HasConditionalAccess -eq 'TRUE')
-    Add-CaseResult -Name 'b3. A4 header exact, AI+success only, SignInCount=2/DistinctDays=2/HasCA=TRUE' -Pass $passB3 `
-        -Detail ("headerOk={0}; rows={1}; signInCount={2}; distinctDays={3}; hasCA={4}" -f ($firstLine -ceq $expectedSigninsHeader), $rows.Count, $(if ($row) { $row.SignInCount } else { 'n/a' }), $(if ($row) { $row.DistinctDays } else { 'n/a' }), $(if ($row) { $row.HasConditionalAccess } else { 'n/a' }))
+              ([int]$row.SignInCount -eq 2) -and ([int]$row.DistinctDays -eq 2) -and `
+              ($row.HasConditionalAccess -eq 'TRUE') -and ($row.IsGuest -eq 'TRUE') -and $boundedUri
+    Add-CaseResult -Name 'b3. A4 bounded filter, guest lookup, AI+success aggregation' -Pass $passB3 `
+        -Detail ("headerOk={0}; rows={1}; signInCount={2}; distinctDays={3}; hasCA={4}; isGuest={5}; bounded={6}" -f ($firstLine -ceq $expectedSigninsHeader), $rows.Count, $(if ($row) { $row.SignInCount } else { 'n/a' }), $(if ($row) { $row.DistinctDays } else { 'n/a' }), $(if ($row) { $row.HasConditionalAccess } else { 'n/a' }), $(if ($row) { $row.IsGuest } else { 'n/a' }), $boundedUri)
 }
 catch {
     Add-CaseResult -Name 'b3. A4 header exact, AI+success only, SignInCount=2/DistinctDays=2/HasCA=TRUE' -Pass $false -Detail "threw: $($_.Exception.Message)"

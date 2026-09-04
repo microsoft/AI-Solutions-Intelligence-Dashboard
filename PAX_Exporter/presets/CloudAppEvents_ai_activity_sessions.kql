@@ -63,8 +63,10 @@ CloudAppEvents
 | extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | where {USERFILTER}
 | extend AISolution = case(
-    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
     Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "Copilot Studio", "Copilot Studio",
+    Application has "Security Copilot", "Security Copilot",
+    Application has "Microsoft 365 Copilot" or Application has "Microsoft Copilot" or Application has "Copilot", "Microsoft 365 Copilot",
     Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
     Application has "Claude" or Application has "Anthropic", "Claude",
     Application has "Gemini" or Application has "Bard", "Gemini",
@@ -84,14 +86,24 @@ CloudAppEvents
 )
 | where isnotempty(AISolution)
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| extend DeviceKey = coalesce(
+    tostring(RawEventData.DeviceId),
+    tostring(RawEventData.deviceId),
+    tostring(IPAddress),
+    tostring(DeviceType),
+    "Unknown"
+)
 | summarize
     Sessions = count(),
     ActiveDays = dcount(bin(Timestamp, 1d)),
     EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
-    DistinctDevices = dcount(DeviceType)
+    DistinctDevices = dcount(DeviceKey)
     by UPN, AISolution, YearMonth
 | extend Category = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("Microsoft 365 Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution == "GitHub Copilot", "Development",
+    AISolution == "Copilot Studio", "Business Automation",
+    AISolution == "Security Copilot", "Security AI",
     AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
     AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
     AISolution in ("Grammarly", "Jasper"), "Writing",
@@ -100,7 +112,7 @@ CloudAppEvents
     "Other"
 )
 | extend RiskTier = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise", "Copilot Studio", "Security Copilot"), "Sanctioned",
     AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
     "Unsanctioned"
 )

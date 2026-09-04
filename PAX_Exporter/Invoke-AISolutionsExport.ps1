@@ -1,17 +1,16 @@
 <#
 .SYNOPSIS
-    Orchestrates the full AI Solutions dashboard export: runs all four Defender
-    Advanced Hunting presets with their correct per-preset partition/bucketing
-    configuration, writes each dashboard CSV to -OutputDirectory, and creates
-    header-only stub CSVs for the three MDA artifacts so the pbit always loads.
+    Orchestrates the AI Solutions dashboard export: runs all four Defender
+    Advanced Hunting presets, creates the three MDA fallback stubs, and
+    optionally adds the six Section-A Graph/Purview artifacts.
 
 .DESCRIPTION
-    The AI Solutions dashboard (pbit) imports twelve CSVs. FOUR of them are
+    The AI Solutions dashboard (pbit) imports thirteen CSVs. FOUR of them are
     produced by Defender Advanced Hunting via Export-DefenderAdvancedHunting.ps1
     and the bundled KQL presets:
 
         ai_activity_sessions.csv   <- CloudAppEvents_ai_activity_sessions.kql   (Month,  bucket UPN)
-        ai_offhours_geo.csv        <- AADSignInEventsBeta_ai_offhours_geo.kql   (Month,  bucket UPN)
+        ai_offhours_geo.csv        <- EntraIdSignInEvents_ai_offhours_geo.kql   (Month,  bucket UPN)
         ai_client_channel.csv      <- DeviceNetworkEvents_ai_client_channel.kql (Month,  no bucket)
         ai_file_proximity.csv      <- DeviceNetworkEvents_ai_file_proximity.kql (Adaptive)
 
@@ -23,8 +22,10 @@
     CREATE-IF-MISSING: if a real MDA CSV is already present in -OutputDirectory
     it is left untouched (never clobbered by a header-only stub).
 
-    The remaining five Section-A CSVs (Graph / Purview / Entra / manual) are OUT
-    OF SCOPE for this exporter and are neither produced nor stubbed here.
+    With -IncludeSectionA, the orchestrator also runs the bundled Graph and
+    Purview collectors to produce the remaining six CSVs, for all thirteen
+    dashboard artifacts in one command. This path requires the additional Graph
+    permissions plus an active Connect-ExchangeOnline session.
 
     Each preset is run through the existing Export-DefenderAdvancedHunting.ps1
     using the SAME invocation contract as Invoke-SmokeTest.ps1 (a splat
@@ -47,8 +48,8 @@
     through to every preset run.
 
 .PARAMETER OutputDirectory
-    Directory that receives all produced CSVs (four real artifacts + three MDA
-    stubs). Created if it does not exist.
+    Directory that receives all produced CSVs: seven baseline artifacts, plus
+    six Section-A artifacts when -IncludeSectionA is set. Created if missing.
 
 .PARAMETER TimeColumn
     Time column used for filtering / subdivision by every preset. Defaults to
@@ -78,18 +79,30 @@
     When set, the three header-only MDA stub CSVs are NOT written. The four real
     Defender AH artifacts are still produced.
 
+.PARAMETER IncludeSectionA
+    Produces the six Graph/Purview/Entra Section-A artifacts in addition to the
+    seven baseline artifacts, yielding the complete 13-file dashboard package.
+
+.PARAMETER GraphQueryExecutor
+    INJECTION SEAM FOR TESTING the Section-A Graph collector.
+
+.PARAMETER PurviewSearchExecutor
+    INJECTION SEAM FOR TESTING the Section-A Purview collector.
+
 .EXAMPLE
-    # Full export with a pre-acquired token over a six-month window.
+    # Full export with a pre-acquired token over a retained-data window.
+    Connect-ExchangeOnline
     .\Invoke-AISolutionsExport.ps1 -AccessToken $env:GRAPH_TOKEN `
         -StartDate '2026-01-01' -EndDate '2026-07-01' `
-        -OutputDirectory .\dashboard_data
+        -OutputDirectory .\dashboard_data -IncludeSectionA
 
 .EXAMPLE
     # Full export with an app registration (client credentials).
+    Connect-ExchangeOnline
     $secret = Read-Host -AsSecureString 'Client secret'
     .\Invoke-AISolutionsExport.ps1 -TenantId $tid -ClientId $cid -ClientSecret $secret `
         -StartDate '2026-01-01' -EndDate '2026-07-01' `
-        -OutputDirectory .\dashboard_data
+        -OutputDirectory .\dashboard_data -IncludeSectionA
 
 .EXAMPLE
     # Credential-free run using an injected mock executor (unit testing).
@@ -100,8 +113,10 @@
 
 .NOTES
     Requires PowerShell 7+. For real (non-mock) execution the identity used must
-    have admin-consented Microsoft Graph permission ThreatHunting.Read.All.
-    Returns a summary PSCustomObject (does NOT call exit). Let failures throw.
+    have admin-consented Microsoft Graph permission ThreatHunting.Read.All. A
+    full Section-A run also requires User.Read.All, LicenseAssignment.Read.All,
+    AuditLog.Read.All, and an active Exchange Online session. Returns a summary
+    PSCustomObject (does NOT call exit). Let failures throw.
 #>
 [CmdletBinding()]
 param(
@@ -143,10 +158,26 @@ $ErrorActionPreference = 'Stop'
 # Order is the run order. UserBucketColumn is $null for non-bucketed presets.
 # ---------------------------------------------------------------------------
 $presetManifest = @(
-    [PSCustomObject]@{ Artifact = 'ai_activity_sessions.csv'; PresetFile = 'CloudAppEvents_ai_activity_sessions.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN' }
-    [PSCustomObject]@{ Artifact = 'ai_offhours_geo.csv';      PresetFile = 'AADSignInEventsBeta_ai_offhours_geo.kql';   PartitionMode = 'Month';    UserBucketColumn = 'UPN' }
-    [PSCustomObject]@{ Artifact = 'ai_client_channel.csv';    PresetFile = 'DeviceNetworkEvents_ai_client_channel.kql'; PartitionMode = 'Month';    UserBucketColumn = $null }
-    [PSCustomObject]@{ Artifact = 'ai_file_proximity.csv';    PresetFile = 'DeviceNetworkEvents_ai_file_proximity.kql'; PartitionMode = 'Adaptive'; UserBucketColumn = $null }
+    [PSCustomObject]@{
+        Artifact = 'ai_activity_sessions.csv'; PresetFile = 'CloudAppEvents_ai_activity_sessions.kql'
+        PartitionMode = 'Month'; UserBucketColumn = 'UPN'
+        OutputColumns = @('UPN','AISolution','YearMonth','Sessions','ActiveDays','EstimatedPrompts','DistinctDevices','Category','RiskTier')
+    }
+    [PSCustomObject]@{
+        Artifact = 'ai_offhours_geo.csv'; PresetFile = 'EntraIdSignInEvents_ai_offhours_geo.kql'
+        PartitionMode = 'Month'; UserBucketColumn = 'UPN'
+        OutputColumns = @('UPN','YearMonth','TotalSessions','OffHoursSessions','OffHoursPct','DistinctCountries','AnomalousCountryCount','AnomalousCountries')
+    }
+    [PSCustomObject]@{
+        Artifact = 'ai_client_channel.csv'; PresetFile = 'DeviceNetworkEvents_ai_client_channel.kql'
+        PartitionMode = 'Month'; UserBucketColumn = $null
+        OutputColumns = @('AISite','Channel','YearMonth','EventCount')
+    }
+    [PSCustomObject]@{
+        Artifact = 'ai_file_proximity.csv'; PresetFile = 'DeviceNetworkEvents_ai_file_proximity.kql'
+        PartitionMode = 'Adaptive'; UserBucketColumn = $null
+        OutputColumns = @('Timestamp','UPN','AISolution','YearMonth','FileName','FolderCategory','FolderPath','SecondsToAI','NameMatchesSensitivePattern','FolderMatchesSensitive')
+    }
 )
 
 # ---------------------------------------------------------------------------
@@ -223,6 +254,7 @@ foreach ($p in $presetManifest) {
         EndDate       = $EndDate
         TimeColumn    = $TimeColumn
         OutputPath    = $outPath
+        OutputColumns = $p.OutputColumns
         PartitionMode = $p.PartitionMode
     }
     if ($p.UserBucketColumn) {
@@ -287,14 +319,14 @@ if (-not $SkipStubs) {
 }
 
 # ---------------------------------------------------------------------------
-# Section-A collectors (only when -IncludeSectionA). Emits the five Section-A
-# CSVs so a single run produces all twelve dashboard artifacts. Auth is passed
+# Section-A collectors (only when -IncludeSectionA). Emits the six Section-A
+# CSVs so a single run produces all thirteen dashboard artifacts. Auth is passed
 # by reference only (seam > token > app-reg); nothing is logged.
 # ---------------------------------------------------------------------------
 $sectionA = $null
 if ($IncludeSectionA) {
     # A1/A3/A4/A5 via the Graph collector (all four; no -Skip* switches).
-    $graphArgs = @{ OutputDirectory = $OutputDirectory; StartDate = $StartDate }
+    $graphArgs = @{ OutputDirectory = $OutputDirectory; StartDate = $StartDate; EndDate = $EndDate }
     if ($null -ne $GraphQueryExecutor) {
         $graphArgs['QueryExecutor'] = $GraphQueryExecutor
     }
@@ -319,7 +351,7 @@ if ($IncludeSectionA) {
         GraphResult   = $graphResult
         CopilotResult = $copilotResult
     }
-    Write-Host "  Section-A: Graph + Purview collectors complete (5 CSVs)" -ForegroundColor Green
+    Write-Host "  Section-A: Graph + Purview collectors complete (6 CSVs)" -ForegroundColor Green
 }
 
 # ---------------------------------------------------------------------------
@@ -334,7 +366,7 @@ Write-Host ("OutputDirectory : {0}" -f $OutputDirectory)
 Write-Host ("Window          : {0} -> {1}" -f $StartDate.ToString('u'), $EndDate.ToString('u'))
 Write-Host ("Presets run     : {0}" -f $presetCount)
 Write-Host ("MDA stubs       : {0}" -f $stubCount)
-Write-Host ("Section-A       : {0}" -f $(if ($IncludeSectionA) { 'included (5 CSVs)' } else { 'skipped' }))
+Write-Host ("Section-A       : {0}" -f $(if ($IncludeSectionA) { 'included (6 CSVs)' } else { 'skipped' }))
 Write-Host ""
 
 return [PSCustomObject]@{

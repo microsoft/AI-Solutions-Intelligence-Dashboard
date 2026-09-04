@@ -26,7 +26,7 @@ Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
 
 ---
 
-## The bundled preset
+## A bundled preset
 
 ### `CloudAppEvents_ai_activity_sessions.kql`
 
@@ -63,12 +63,12 @@ The exporter supplies the Defender-sourced CSVs behind the **AI Solutions Intell
 
 | Dashboard CSV | Source table | Preset |
 | --- | --- | --- |
-| `ai_activity_sessions.csv` | `CloudAppEvents` | `CloudAppEvents_ai_activity_sessions.kql` (bundled) |
-| `ai_file_proximity.csv` | Advanced Hunting table | *(write your own — see below)* |
-| `ai_offhours_geo.csv` | Advanced Hunting table | *(write your own — see below)* |
-| `ai_client_channel.csv` | Advanced Hunting table | *(write your own — see below)* |
+| `ai_activity_sessions.csv` | `CloudAppEvents` (Defender for Cloud Apps) | `CloudAppEvents_ai_activity_sessions.kql` |
+| `ai_file_proximity.csv` | `DeviceFileEvents` + `DeviceNetworkEvents` (MDE Plan 2) | `DeviceNetworkEvents_ai_file_proximity.kql` |
+| `ai_offhours_geo.csv` | `EntraIdSignInEvents` | `EntraIdSignInEvents_ai_offhours_geo.kql` |
+| `ai_client_channel.csv` | `DeviceNetworkEvents` (MDE Plan 2) | `DeviceNetworkEvents_ai_client_channel.kql` |
 
-The bundled preset covers `ai_activity_sessions`. For the other artifacts, author a query using the pattern below and save it under `presets/`.
+All four presets are bundled. Availability still depends on the listed product and table being present in your tenant.
 
 ---
 
@@ -80,7 +80,7 @@ and both sit at the very top of the preset files under a banner that says
 
 **By app name — `AIAppNames`** (sign-in / cloud-app presets):
 - `presets/CloudAppEvents_ai_activity_sessions.kql`
-- `presets/AADSignInEventsBeta_ai_offhours_geo.kql`
+- `presets/EntraIdSignInEvents_ai_offhours_geo.kql`
 
 **By website — `AIDomains`** (network presets):
 - `presets/DeviceNetworkEvents_ai_client_channel.kql`

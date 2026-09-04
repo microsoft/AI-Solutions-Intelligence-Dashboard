@@ -4,8 +4,8 @@
 
 | Path | Who it's for | CSVs you populate | CSVs you stub |
 |---|---|---|---|
-| **Path A — No MDA** | M365 E5 + MDE Plan 2, MDA not deployed | 9 baseline CSVs | 3 MDA stubs |
-| **Path B — Full MDA** | M365 E5 + MDE Plan 2 + MDA + App Governance | All 12 CSVs | 0 |
+| **Path A — No MDA** | M365 E5 + MDE Plan 2, MDA not deployed | Up to 9 baseline CSVs | 3 MDA stubs plus an `ai_activity_sessions.csv` stub |
+| **Path B — Full MDA** | M365 E5 + MDE Plan 2 + MDA + App Governance | All 13 CSVs | 0 |
 
 The PBIT is identical for both paths — the difference is just what's in the data folder.
 
@@ -16,12 +16,13 @@ The PBIT is identical for both paths — the difference is just what's in the da
 | Step | CSV file | Tool | Requires |
 |---|---|---|---|
 | 1.1 | `EntraUsers.csv` | 💻 PowerShell (Microsoft Graph) | Graph API |
-| 1.2 | `ai_copilot_usage_graph.csv` | 💻 PowerShell (Purview Audit) or 🌐 Graph API | Purview Audit reader |
-| **1.3** | **`ai_activity_sessions.csv`** | **🔍 Defender Advanced Hunting** | **MDE / MDA connected** |
+| 1.2 | `ai_copilot_usage_graph.csv` | 💻 PowerShell (Purview Audit) | Purview Audit reader |
+| 1.2b | `ai_copilot_surface_usage.csv` | 💻 PowerShell (Purview Audit) | Purview Audit reader |
+| **1.3** | **`ai_activity_sessions.csv`** | **🔍 Defender Advanced Hunting** | **Defender for Cloud Apps (`CloudAppEvents`)** |
 | 1.4 | `ai_oauth_consents.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
 | 1.5 | `ai_sso_signins.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
 | **1.6** | **`ai_file_proximity.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
-| **1.7** | **`ai_offhours_geo.csv`** | **🔍 Defender Advanced Hunting** | **AADSignInEventsBeta** |
+| **1.7** | **`ai_offhours_geo.csv`** | **🔍 Defender Advanced Hunting** | **`EntraIdSignInEvents`** |
 | 1.8 | `ai_solutions_catalog.csv` | 📋 Excel / text editor | — |
 | **1.9** | **`ai_client_channel.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
 | **3.1** | **`ai_appgov_alerts.csv`** | **🔍 Defender Advanced Hunting** | **MDA App Governance** |
@@ -42,54 +43,57 @@ The PBIT is identical for both paths — the difference is just what's in the da
 
 - Power BI Desktop (latest)
 - One folder for all CSVs, e.g. `C:\AI_Usage_Data\` (Windows) or `~/AI_Usage_Data/` (Mac)
-- The PBIT file: [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
+- The PBIT file: [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
 - The KQL pack: [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql)
 
 Permissions you will need over the course of setup:
-- Microsoft Graph: `Reports.Read.All`, `AuditLog.Read.All`, `Directory.Read.All`, `Application.Read.All`
+- Microsoft Graph: `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`
 - Microsoft Defender XDR: Advanced Hunting access (Security Reader minimum)
 - Microsoft Purview: eDiscovery / Audit reader (or use PowerShell `Search-UnifiedAuditLog`)
 - Defender for Cloud Apps (Path B only): Reader on the MDA portal + App Governance reader
+
+> **Retention:** Native Defender Advanced Hunting commonly exposes about 30 days of data. Microsoft Entra sign-in and Purview Audit retention varies by license and audit policy. A query that asks for 90 or 180 days only returns what the source still retains.
 
 ---
 
 ## Step 1 — Collect baseline CSVs (both paths)
 
-These 9 CSVs power the core dashboard pages (Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets, and more).
+These 10 CSVs power the core dashboard pages (Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets, and more).
 
 ### 1.1  EntraUsers.csv  (Microsoft Graph)
 
 ```powershell
-Connect-MgGraph -Scopes "User.Read.All","Directory.Read.All"
+$skuById = @{}
+Connect-MgGraph -Scopes "User.Read.All","LicenseAssignment.Read.All"
+Get-MgSubscribedSku -All | ForEach-Object {
+  $skuById[$_.SkuId.ToString()] = $_.SkuPartNumber
+}
 Get-MgUser -All `
   -Property "userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,assignedLicenses,manager" `
   -ExpandProperty manager |
   Select-Object userPrincipalName,displayName,department,jobTitle,city,country,companyName,
                 accountEnabled,userType,createdDateTime,
     @{n='hasLicense';e={ if ($_.AssignedLicenses.Count -gt 0) {'TRUE'} else {'FALSE'} }},
-    @{n='assignedLicenses';e={ ($_.AssignedLicenses.SkuId) -join ';' }},
+    @{n='assignedLicenses';e={
+      ($_.AssignedLicenses | ForEach-Object {
+        $id = $_.SkuId.ToString()
+        if ($skuById.ContainsKey($id)) { $skuById[$id] } else { $id }
+      }) -join ';'
+    }},
     @{n='manager_displayName';      e={ $_.Manager.AdditionalProperties.displayName }},
     @{n='manager_userPrincipalName';e={ $_.Manager.AdditionalProperties.userPrincipalName }} |
   Export-Csv -NoTypeInformation EntraUsers.csv
 ```
 
-> Replace Copilot SKU GUIDs with the literal "Copilot" so the License Utilization measure works:
-> `(Get-Content EntraUsers.csv) -replace '05e9a617-0261-4cee-bb44-138d3ef5d965','Copilot_M365' | Set-Content EntraUsers.csv`
+> `assignedLicenses` must contain Graph `skuPartNumber` values, not tenant license GUIDs. The mapping above and `Collect-AISolutionsGraph.ps1` do this automatically.
 
-### 1.2  ai_copilot_usage_graph.csv  (Purview Audit OR Graph Reports API)
+### 1.2  Copilot usage CSVs  (Purview Audit)
 
-The Power Query loads a file named **`ai_copilot_usage_graph.csv`**. You can populate it from either source:
+Run `PAX_Exporter\Collect-AICopilotUsage.ps1`. It searches Purview Audit for `CopilotInteraction` events and writes both `ai_copilot_usage_graph.csv` (the compatibility-wide schema) and `ai_copilot_surface_usage.csv` (one row per user, month, and observed surface). The normalized file prefers `AppHost`, falls back to `Workload`, retains the raw source values, and automatically includes new surfaces.
 
-**Option A (Purview — recommended, richer per-surface data):**
-Run the PowerShell script in `kql_queries_v22_E5V3.kql` Section A2. It searches Purview Audit for `CopilotInteraction` events and pivots them into per-user monthly prompt counts by surface (Teams/Word/Excel/Outlook/PowerPoint/Chat).
+The collector can return more than 50,000 records overall. It safely splits any date window that reaches the 50,000-record audit-session ceiling and de-duplicates the half-open child windows. If a one-minute window itself reaches the ceiling, collection fails explicitly rather than publishing a silently truncated export.
 
-**Option B (Graph Reports API — simpler):**
-```
-GET https://graph.microsoft.com/v1.0/reports/getMicrosoft365CopilotUsageUserDetail(period='D90')
-```
-Save the response as `ai_copilot_usage_graph.csv`.
-
-> **Important:** Whichever source you choose, the output file must be named `ai_copilot_usage_graph.csv`.
+> The Graph Reports user-detail endpoint returns last-activity fields, not the required per-surface count schema, and cannot replace these Purview exports.
 >
 > Why Purview over Defender CloudAppEvents? CloudAppEvents only captures the BizChat surface — it misses in-app Copilot in Word/Excel/PPT/Outlook/Teams. Purview is the only complete source.
 
@@ -97,6 +101,8 @@ Save the response as `ai_copilot_usage_graph.csv`.
 
 **Output file:** `ai_activity_sessions.csv`  
 **Schema:** `UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier`
+
+> `CloudAppEvents` requires Defender for Cloud Apps data to be available in Advanced Hunting. MDE Plan 2 alone does not provide this table. Without it, create this exact header as a stub; activity-dependent visuals will remain empty.
 
 <details>
 <summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
@@ -112,11 +118,13 @@ let AIAppNames = dynamic([
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
-| where Timestamp > ago(180d)
+| where Timestamp > ago(30d)
 | where Application has_any (AIAppNames)
 | extend AISolution = case(
-    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
     Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "Copilot Studio", "Copilot Studio",
+    Application has "Security Copilot", "Security Copilot",
+    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
     Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
     Application has "Claude" or Application has "Anthropic", "Claude",
     Application has "Gemini" or Application has "Bard", "Gemini",
@@ -138,14 +146,24 @@ CloudAppEvents
 | lookup kind=leftouter UserUpns on AccountObjectId
 | extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| extend DeviceKey = coalesce(
+    tostring(RawEventData.DeviceId),
+    tostring(RawEventData.deviceId),
+    tostring(IPAddress),
+    tostring(DeviceType),
+    "Unknown"
+)
 | summarize
     Sessions = count(),
     ActiveDays = dcount(bin(Timestamp, 1d)),
     EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
-    DistinctDevices = dcount(DeviceType)
+    DistinctDevices = dcount(DeviceKey)
     by UPN, AISolution, YearMonth
 | extend Category = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("Microsoft 365 Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution == "GitHub Copilot", "Development",
+    AISolution == "Copilot Studio", "Business Automation",
+    AISolution == "Security Copilot", "Security AI",
     AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
     AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
     AISolution in ("Grammarly", "Jasper"), "Writing",
@@ -154,7 +172,7 @@ CloudAppEvents
     "Other"
 )
 | extend RiskTier = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise", "Copilot Studio", "Security Copilot"), "Sanctioned",
     AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
     "Unsanctioned"
 )
@@ -205,7 +223,7 @@ let SensitiveFolderPatterns = dynamic([
 ]);
 let AIVisits =
     DeviceNetworkEvents
-    | where Timestamp > ago(90d)
+    | where Timestamp > ago(30d)
     | where ActionType == "ConnectionSuccess"
     | where RemoteUrl has_any (AIDomains)
     | extend AISolution = case(
@@ -229,7 +247,7 @@ let AIVisits =
     | project AITimestamp = Timestamp, DeviceId, AISolution;
 let FileAccess =
     DeviceFileEvents
-    | where Timestamp > ago(90d)
+    | where Timestamp > ago(30d)
     | where ActionType in ("FileCreated", "FileModified", "FileRenamed", "FileCopied")
     | where FileName !endswith ".tmp" and FileName !endswith ".log"
     | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
@@ -258,7 +276,7 @@ AIVisits
 
 </details>
 
-### 1.7  🔍 ai_offhours_geo.csv  (Defender Advanced Hunting — AADSignInEventsBeta)
+### 1.7  🔍 ai_offhours_geo.csv  (Defender Advanced Hunting — EntraIdSignInEvents)
 
 **Output file:** `ai_offhours_geo.csv`  
 **Schema:** `UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct, DistinctCountries, AnomalousCountryCount, AnomalousCountries`
@@ -274,8 +292,8 @@ let AIAppNames = dynamic([
     "Notion", "Jasper", "Adobe Firefly", "Canva"
 ]);
 let AISignIns =
-    AADSignInEventsBeta
-    | where Timestamp > ago(90d)
+    EntraIdSignInEvents
+    | where Timestamp > ago(30d)
     | where ErrorCode == 0
     | where Application has_any (AIAppNames)
         or ResourceDisplayName has_any (AIAppNames)
@@ -310,8 +328,6 @@ AISignIns
 
 </details>
 
-> **Schema note:** The country column name differs by environment. This query uses `Country` (correct for Sentinel workspaces). If running in **native Defender XDR Advanced Hunting**, change `coalesce(Country, "Unknown")` to `coalesce(CountryCode, "Unknown")`.
-
 ### 1.8  ai_solutions_catalog.csv  (hand-maintained)
 
 Open in Excel. Schema: `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup`.
@@ -340,7 +356,7 @@ let AIDomains = dynamic([
     "runwayml.com", "canva.com", "app.synthesia.io"
 ]);
 DeviceNetworkEvents
-| where Timestamp > ago(90d)
+| where Timestamp > ago(30d)
 | where ActionType == "ConnectionSuccess"
 | where RemoteUrl has_any (AIDomains)
 | extend AISite = case(
@@ -400,7 +416,14 @@ AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,Transac
 Timestamp,YearMonth,UPN,AppName,ActionType,PolicyHit,PolicyAction,IPAddress,CountryCode,EventCount
 ```
 
-The three MDA pages (11, 12, 13) will display the yellow "MDA Required" callout and empty visuals. Everything else works.
+Because `CloudAppEvents` is also a Defender for Cloud Apps table, create this additional stub when that table is unavailable:
+
+**`ai_activity_sessions.csv`**
+```
+UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier
+```
+
+MDA-dependent visuals, including the Shadow AI Catalog (MDA) page, remain empty. Activity-dependent visuals also remain empty when `ai_activity_sessions.csv` is a stub.
 
 **Skip to Step 4.**
 
@@ -425,12 +448,12 @@ let AIAppNames = dynamic([
     "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
 ]);
 AlertInfo
-| where Timestamp > ago(180d)
+| where Timestamp > ago(30d)
 | where ServiceSource == "Microsoft Cloud App Security"
     or ServiceSource == "Microsoft Defender for Cloud Apps"
 | join kind=inner (
     AlertEvidence
-    | where Timestamp > ago(180d)
+    | where Timestamp > ago(30d)
     | where EntityType == "User" or EntityType == "CloudApplication"
     | extend EvidenceDetail = case(
         EntityType == "User", AccountUpn,
@@ -477,6 +500,7 @@ AlertInfo
 **Requires:** MDA + Conditional Access App Control policies configured for at least one AI app  
 **Output file:** `ai_mda_sessions.csv`  
 **Schema:** `Timestamp, YearMonth, UPN, AppName, ActionType, PolicyHit, PolicyAction, IPAddress, CountryCode, EventCount`
+**Value domains:** `PolicyHit` is `TRUE` or `FALSE`; `PolicyAction` is `Allow`, `Warn`, or `Block`.
 
 <details>
 <summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
@@ -492,7 +516,7 @@ let AIAppNames = dynamic([
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
-| where Timestamp > ago(90d)
+| where Timestamp > ago(30d)
 | where Application has_any (AIAppNames)
 | where ActionType in (
     "FileUploaded", "FileDownloaded", "FilePreviewed",
@@ -503,11 +527,11 @@ CloudAppEvents
 | lookup kind=leftouter UserUpns on AccountObjectId
 | extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
-| extend PolicyHit = tostring(RawEventData.PolicyName)
+| extend PolicyName = tostring(RawEventData.PolicyName)
+| extend PolicyHit = iff(isnotempty(PolicyName), "TRUE", "FALSE")
 | extend PolicyAction = case(
     ActionType has "Blocked", "Block",
-    ActionType has "Monitor", "Monitor",
-    isnotempty(PolicyHit), "Alert",
+    ActionType has "Warn" or ActionType has "Monitor" or PolicyHit == "TRUE", "Warn",
     "Allow"
 )
 | extend IPAddress = tostring(IPAddress)
@@ -536,10 +560,10 @@ CloudAppEvents
 
 ## Step 4 — Open the PBIT
 
-1. Double-click [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
-2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path (with trailing slash):
-   - Windows: `C:\AI_Usage_Data\`
-   - Mac: `/Users/yourname/AI_Usage_Data/`
+1. Double-click [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
+   - Windows: `C:\AI_Usage_Data`
+   - Mac: `/Users/yourname/AI_Usage_Data`
 3. Click **Load**
 4. Wait for refresh (1–3 min depending on tenant size)
 5. **File → Save As** → save as PBIX with a descriptive name (e.g. `AI_Solutions_<TenantName>_<YYYY-MM-DD>.pbix`)
@@ -586,9 +610,9 @@ When MDA gets deployed in your tenant later:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| "We couldn't find the file" on load | Folder path missing trailing slash | Add trailing `\` (Windows) or `/` (Mac) |
+| "We couldn't find the file" on load | Folder path is incorrect or the expected CSV is missing | Confirm the folder and CSV filename shown in the error |
 | "Shadow AI Catalog (MDA)" visuals blank but no overlay | Stub CSV missing | Create the header-only CSV from Step 2 |
-| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_usage_graph.csv` from Purview Audit (Step 1.2) |
+| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export both Copilot CSVs with `Collect-AICopilotUsage.ps1` (Step 1.2) |
 | Weekly Days > 7 | Old PBIT version | Re-download the latest PBIT; the `Weekly Days Used per User` measure is hard-capped at 7 |
 | "Behavioral Risk" page empty | Missing MDE Plan 2 export | Re-export `ai_file_proximity.csv` and `ai_offhours_geo.csv` (Steps 1.6, 1.7) |
 | Calendar slicer day-grain doesn't filter facts | Expected — fact tables are at month grain | Use Year / Quarter / Month slicer instead |
@@ -599,14 +623,15 @@ When MDA gets deployed in your tenant later:
 
 | File | Source | Schema |
 |---|---|---|
-| [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit) | Power BI template (10 pages, 122 measures) | — |
+| [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) | Power BI template (10 pages, 123 measures) | — |
 | [AI_Usage_v26_Blueprint.md](AI_Usage_v26_Blueprint.md) | Architecture & page-tier mapping | — |
 | [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql) | All collection queries (A1–A5, B2–B8) | — |
 
 | CSV | Tier | Optional? | Schema (header) |
 |---|---|---|---|
 | EntraUsers.csv | Baseline | No | `userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,hasLicense,assignedLicenses,manager_displayName,manager_userPrincipalName` |
-| ai_copilot_usage_graph.csv | Baseline (Purview or Graph) | No | `UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate` |
+| ai_copilot_usage_graph.csv | Baseline (Purview) | No | `UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate` |
+| ai_copilot_surface_usage.csv | Baseline (Purview) | No | `UserPrincipalName,YearMonth,Surface,SourceWorkload,SourceAppHost,PromptCount,ActiveDays,LastActivityDate` |
 | ai_activity_sessions.csv | Baseline (Defender) | No | `UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier` |
 | ai_oauth_consents.csv | Baseline (Entra) | No | `UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions` |
 | ai_sso_signins.csv | Baseline (Entra) | No | `UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn` |

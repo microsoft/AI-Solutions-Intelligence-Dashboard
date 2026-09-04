@@ -14,7 +14,7 @@
 
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
-[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
+[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
@@ -42,7 +42,7 @@
 
 ## 🧭 Choose how to collect your data
 
-Every tenant loads the **same report** from the **same 12 CSV files** — you just pick how to generate them.
+Every tenant loads the **same report** from the **same 13 CSV files** — you just pick how to generate them.
 
 <table>
 <tr>
@@ -139,16 +139,16 @@ Read-only permissions, data handling, and licensing notes.
 
 <br>
 
-This dashboard replaces fragmented, surface-level AI adoption reports with a single, unified view that spans Copilot usage, shadow AI detection, OAuth risk scoring, behavioral anomalies, and (optionally) Microsoft Defender for Cloud Apps signals — all from one Power BI template. Whether your tenant runs M365 E3 + Copilot or the full E5 + MDA stack, the same PBIT adapts automatically to whatever data you provide.
+This dashboard replaces fragmented, surface-level AI adoption reports with a single, unified view that spans Copilot usage, shadow AI detection, OAuth risk scoring, behavioral anomalies, and (optionally) Microsoft Defender for Cloud Apps signals. The same PBIT loads on every tier; visuals remain empty when their required source table is unavailable.
 
 **Executive Overview:**
 Track total AI users, adoption rate, license utilization, top tools, and monthly trends at a glance. Identify the gap between licensed capacity and actual usage with KPI cards that surface workforce adoption, per-surface Copilot prompt counts (Teams, Word, Excel, Outlook, PowerPoint, Chat), and department-level activity breakdowns.
 
 **AI Adoption Strategy:**
-Detect shadow AI usage across unsanctioned tools, assess behavioral risk through file-proximity analysis and off-hours/geo anomalies, and review OAuth consent patterns with permission-weighted risk scores. Pages are tiered by license — E3+Copilot pages work out of the box, MDE Plan 2 pages light up with endpoint data, and MDA pages activate when Defender for Cloud Apps is deployed.
+Detect shadow AI usage across unsanctioned tools, assess behavioral risk through file-proximity analysis and off-hours/geo anomalies, and review OAuth consent patterns with permission-weighted risk scores. Coverage is source-specific: MDE Plan 2 supplies device-event signals, Entra supplies sign-ins, Purview supplies Copilot interactions, and Defender for Cloud Apps supplies `CloudAppEvents`, App Governance, and Cloud Discovery.
 
 **Solution Priority:**
-Prioritize AI tool governance with the solutions catalog (Sanctioned / Conditional / Unsanctioned tiers), benchmark adoption against configurable targets, and use the tier comparison matrix to understand exactly which pages and signals map to your current license level.
+Prioritize AI tool governance with the solutions catalog (Sanctioned / Conditional / Unsanctioned tiers), benchmark adoption against configurable targets, and use the tier comparison matrix to understand which pages and signals map to your available data sources.
 
 **AI Solutions Usage Activity & Trends:**
 Drill into per-user activity across all signals, visualize department intensity with bubble charts (weekly days vs. weekly actions per user, capped at 7), and break down AI client channels (Browser / Desktop / API) by AI site. Optional MDA pages provide OAuth anomaly alerts, cloud discovery shadow AI catalogs with risk scores, and per-session DLP/policy enforcement intelligence.
@@ -177,7 +177,7 @@ KPI cards showing total AI users, adoption rate, top tools, and monthly trends. 
 
 ### 2. Copilot Deep Dive
 
-Per-surface Copilot prompt breakdowns (Teams / Word / Excel / Outlook / PowerPoint / Chat) sourced from Purview Audit `CopilotInteraction` records, license utilization metrics, and active Copilot user counts. Requires `ai_copilot_usage_graph.csv`.
+Dynamic Copilot prompt breakdowns for every surface observed by Purview Audit, including Teams, Word, Excel, Outlook, PowerPoint, Chat, Loop, OneNote, SharePoint, Edge, and future workloads. Requires `ai_copilot_usage_graph.csv` and `ai_copilot_surface_usage.csv`.
 
 *Screenshot coming soon*
 *Click image to enlarge*
@@ -186,7 +186,7 @@ Per-surface Copilot prompt breakdowns (Teams / Word / Excel / Outlook / PowerPoi
 
 ### 3. Behavioral Risk
 
-Per-user risk scoring with file-proximity analysis (files accessed within 5 minutes of AI site visits), off-hours session percentages, geo anomaly counts, and composite AI Risk Score. OAuth consent patterns with permission-weighted risk scoring. Requires MDE Plan 2 data.
+Per-user risk scoring with file-proximity analysis (files accessed within 5 minutes of AI site visits), off-hours session percentages, geo anomaly counts, and composite AI Risk Score. OAuth consent patterns use Graph audit data. File proximity requires MDE Plan 2; off-hours analysis requires `EntraIdSignInEvents`.
 
 *Screenshot coming soon*
 *Click image to enlarge*
@@ -195,7 +195,7 @@ Per-user risk scoring with file-proximity analysis (files accessed within 5 minu
 
 ### 4. Shadow AI
 
-Unmanaged AI detection showing unsanctioned tool usage, non-Microsoft AI activity, percentage of users on unmanaged tools, and tool sprawl metrics. Identifies shadow AI exposure across the organization.
+Unmanaged AI detection showing unsanctioned tool usage, non-Microsoft AI activity, percentage of users on unmanaged tools, and tool sprawl metrics. This page is populated by `CloudAppEvents` and therefore requires Defender for Cloud Apps; the MDE-only file-proximity and client-channel exports do not populate it.
 
 *Screenshot coming soon*
 *Click image to enlarge*
@@ -265,7 +265,7 @@ Coverage matrix mapping each report page to its required license level (E3+Copil
 
 Copy and send this pre-written email to your IT administrator or security team to request the access and permissions needed to populate the dashboard. It covers Microsoft Graph, Defender XDR, Purview, and (optionally) MDA portal access.
 
-**[📧 Open as Outlook Draft →](mailto:?subject=Access%20Request%3A%20AI%20Solutions%20Intelligence%20Dashboard%20Setup&body=Hi%20%5BIT%20Admin%20Name%5D%2C%0A%0AI%27m%20setting%20up%20the%20AI%20Solutions%20Intelligence%20Dashboard%20to%20provide%20visibility%20into%20AI%20usage%20across%20our%20Microsoft%20365%20tenant.%20I%20need%20the%20following%20access%20to%20collect%20the%20required%20data%3A%0A%0A1.%20Microsoft%20Graph%20API%20permissions%3A%20User.Read.All%2C%20Directory.Read.All%2C%20Reports.Read.All%2C%20AuditLog.Read.All%2C%20Application.Read.All%0A2.%20Microsoft%20Entra%20admin%20centre%3A%20Reports%20Reader%20%2B%20Security%20Reader%20role%0A3.%20Microsoft%20Purview%20portal%3A%20Audit%20Reader%20or%20eDiscovery%20Manager%20role%0A4.%20Microsoft%20Defender%20XDR%3A%20Security%20Reader%20(Advanced%20Hunting%20access)%0A5.%20(Optional)%20Defender%20for%20Cloud%20Apps%3A%20Cloud%20App%20Security%20Reader%0A%0AThe%20dashboard%20uses%20read-only%20access%20to%20generate%20CSV%20exports.%20No%20write%20permissions%20are%20required.%0A%0ASetup%20instructions%3A%20https%3A%2F%2Fgithub.com%2Fmicrosoft%2FAI-Solutions-Intelligence-Dashboard%0A%0APlease%20let%20me%20know%20if%20you%20need%20additional%20details.%0A%0AThank%20you!)**
+**Copy the request below into your preferred mail client.**
 
 ---
 
@@ -279,8 +279,8 @@ into AI usage across our Microsoft 365 tenant. I need the following access
 to collect the required data:
 
 1. Microsoft Graph API permissions:
-   - User.Read.All, Directory.Read.All, Reports.Read.All,
-     AuditLog.Read.All, Application.Read.All
+   - User.Read.All, LicenseAssignment.Read.All, AuditLog.Read.All,
+     ThreatHunting.Read.All
 
 2. Microsoft Entra admin centre: Reports Reader + Security Reader role
 
@@ -288,7 +288,8 @@ to collect the required data:
 
 4. Microsoft Defender XDR: Security Reader (Advanced Hunting access)
 
-5. (Optional) Defender for Cloud Apps: Cloud App Security Reader
+5. Defender for Cloud Apps: Cloud App Security Reader when collecting
+   CloudAppEvents, App Governance, or Cloud Discovery data
 
 The dashboard uses read-only access to generate CSV exports.
 No write permissions are required.
@@ -312,11 +313,11 @@ Thank you!
 
 ### Step 1. Collect Your Data (CSVs)
 
-The dashboard is powered by 12 CSV files. Depending on your tenant's license tier, you'll populate 9 baseline CSVs and either stub or populate 3 MDA-specific CSVs. Save all files in a single folder (e.g., `C:\AI_Usage_Data\` on Windows or `~/AI_Usage_Data/` on macOS).
+The dashboard expects 13 CSV filenames. Populate each source available in your tenant and use an exact header-only stub for any unavailable source. Save all files in a single folder (for example, `C:\AI_Usage_Data\`).
 
 #### Path A — Setup without MDA (M365 E3/E5 + MDE Plan 2)
 
-Collect the 9 baseline CSVs using Microsoft Graph PowerShell, Purview Audit exports, and Defender Advanced Hunting KQL queries, then create 3 header-only MDA stub files so Power Query loads cleanly. Estimated time: 30–45 minutes.
+Collect the available baseline CSVs using Microsoft Graph, Purview Audit, and Defender Advanced Hunting, then create header-only files for unavailable sources. `CloudAppEvents` requires Defender for Cloud Apps, so no-MDA tenants must also stub `ai_activity_sessions.csv`.
 
 <details>
 <summary><strong>Detailed step-by-step guide</strong></summary>
@@ -329,13 +330,14 @@ Collect the 9 baseline CSVs using Microsoft Graph PowerShell, Purview Audit expo
 |---|---|---|
 | 1 | `EntraUsers.csv` | Microsoft Graph (`Get-MgUser` with `-ExpandProperty manager`) |
 | 2 | `ai_solutions_catalog.csv` | Manual — Excel → CSV with columns: `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup` |
-| 3 | `ai_copilot_usage_graph.csv` | Microsoft Purview Audit (`CopilotInteraction` records, pivoted via PowerShell) OR Microsoft Graph Reports API |
-| 4 | `ai_activity_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents`) |
-| 5 | `ai_oauth_consents.csv` | Entra Audit Logs via Graph (`Get-MgAuditLogDirectoryAudit`) |
-| 6 | `ai_sso_signins.csv` | Entra Sign-In Logs via Graph (`Get-MgAuditLogSignIn`) |
-| 7 | `ai_file_proximity.csv` | Defender XDR Advanced Hunting (`DeviceFileEvents` joined with `DeviceNetworkEvents`) |
-| 8 | `ai_offhours_geo.csv` | Defender XDR Advanced Hunting (`AADSignInEventsBeta`) |
-| 9 | `ai_client_channel.csv` | Defender XDR Advanced Hunting (Browser / Desktop / API split from UserAgent) |
+| 3 | `ai_copilot_usage_graph.csv` | Microsoft Purview Audit (`CopilotInteraction` records, pivoted via PowerShell) |
+| 4 | `ai_copilot_surface_usage.csv` | Microsoft Purview Audit (`CopilotInteraction` records, normalized to one row per user/month/surface) |
+| 5 | `ai_activity_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents`) |
+| 6 | `ai_oauth_consents.csv` | Entra Audit Logs via Graph (`Get-MgAuditLogDirectoryAudit`) |
+| 7 | `ai_sso_signins.csv` | Entra Sign-In Logs via Graph (`Get-MgAuditLogSignIn`) |
+| 8 | `ai_file_proximity.csv` | Defender XDR Advanced Hunting (`DeviceFileEvents` joined with `DeviceNetworkEvents`) |
+| 9 | `ai_offhours_geo.csv` | Defender XDR Advanced Hunting (`EntraIdSignInEvents`) |
+| 10 | `ai_client_channel.csv` | Defender XDR Advanced Hunting (Browser / Desktop / API split from UserAgent) |
 
 **Then create 3 MDA stub files** (header-only CSVs):
 
@@ -353,8 +355,9 @@ AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,Transac
 ```csv
 Timestamp,YearMonth,UPN,AppName,ActionType,PolicyHit,PolicyAction,IPAddress,CountryCode,EventCount
 ```
+For populated rows, `PolicyHit` must be `TRUE` or `FALSE`, and `PolicyAction` must be `Allow`, `Warn`, or `Block`.
 
-The three MDA pages will display a yellow "MDA Required" callout and empty visuals. Everything else works normally.
+MDA-backed visuals remain empty when these files contain only headers. MDE, Entra, and Purview-backed visuals continue to refresh.
 
 See [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) for the complete PowerShell scripts, KQL queries, and step-by-step export procedures for each CSV.
 
@@ -364,20 +367,20 @@ See [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) for the complete PowerShell scrip
 
 #### Path B — Setup with Full MDA (M365 E5 + MDE Plan 2 + MDA)
 
-Collect all 9 baseline CSVs from Path A, then populate the 3 MDA CSVs with real data from App Governance alerts, Cloud Discovery exports, and Conditional Access App Control session logs.
+Collect all 10 baseline CSVs from Path A, then populate the 3 MDA CSVs with real data from App Governance alerts, Cloud Discovery exports, and Conditional Access App Control session logs.
 
 <details>
 <summary><strong>Detailed step-by-step guide</strong></summary>
 
 <br>
 
-Complete all 9 baseline CSVs from Path A, then populate these 3 additional files:
+Complete all 10 baseline CSVs from Path A, then populate these 3 additional files:
 
 | # | File | Source |
 |---|---|---|
-| 10 | `ai_appgov_alerts.csv` | Defender XDR Advanced Hunting (`AppGovernanceAlert` table, filtered for AI apps) |
-| 11 | `ai_cloud_discovery.csv` | MDA portal → Cloud Discovery → Discovered Apps → Filter `Category = Generative AI` → Export CSV → reshape with PowerShell |
-| 12 | `ai_mda_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents` with Conditional Access App Control session policies) |
+| 11 | `ai_appgov_alerts.csv` | Defender XDR Advanced Hunting (`AppGovernanceAlert` table, filtered for AI apps) |
+| 12 | `ai_cloud_discovery.csv` | MDA portal → Cloud Discovery → Discovered Apps → Filter `Category = Generative AI` → Export CSV → reshape with PowerShell |
+| 13 | `ai_mda_sessions.csv` | Defender XDR Advanced Hunting (`CloudAppEvents` with Conditional Access App Control session policies) |
 
 **Prerequisites for Path B:**
 
@@ -415,7 +418,7 @@ Ensure you have the required software, roles, and (optionally) Defender services
 | Microsoft Purview portal | Audit Reader / eDiscovery Manager | Copilot prompts (`CopilotInteraction`) |
 | Microsoft Defender XDR | Security Reader | Advanced Hunting queries |
 | Defender for Cloud Apps (MDA) | Cloud App Security Reader | App Governance, Cloud Discovery |
-| Microsoft Graph | `User.Read.All`, `Directory.Read.All`, `Reports.Read.All`, `AuditLog.Read.All`, `Application.Read.All` | EntraUsers, Copilot snapshot, OAuth, Sign-Ins |
+| Microsoft Graph | `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`, `ThreatHunting.Read.All` | Entra users and licenses, OAuth, sign-ins, Defender hunting |
 
 ---
 
@@ -440,11 +443,11 @@ Required for the Behavioral Risk and Shadow AI pages.
 
 <br>
 
-1. Download [AI-Solutions-Intelligence-Dashboard V26.pbit](AI-Solutions-Intelligence-Dashboard%20V26.pbit)
+1. Download [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
 2. Double-click the file → Power BI Desktop opens
-3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path **with a trailing slash**:
-   - Windows: `C:\AI_Usage_Data\`
-   - macOS: `/Users/yourname/AI_Usage_Data/`
+3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
+   - Windows: `C:\AI_Usage_Data`
+   - macOS: `/Users/yourname/AI_Usage_Data`
 4. Click **Load** → wait 1–3 minutes for refresh
 5. **File → Save As** → save as `.pbix` with a descriptive name (e.g. `AI_Solutions_<TenantName>_<YYYY-MM-DD>.pbix`)
 
@@ -459,18 +462,18 @@ Required for the Behavioral Risk and Shadow AI pages.
 
 | Check | Path A (No MDA) | Path B (Full MDA) |
 |---|---|---|
-| Executive Summary KPI cards populated | ✅ | ✅ |
-| Dept Intensity bubble chart, X-axis 0–7 | ✅ | ✅ |
-| Behavioral Risk per-user averages displayed | ✅ | ✅ |
-| Shadow AI page, unmanaged AI metrics | ✅ | ✅ |
+| Identity and Copilot KPI cards populated | ✅ | ✅ |
+| Dept Intensity bubble chart, X-axis 0–7 | Empty without `CloudAppEvents` | ✅ |
+| Behavioral Risk per-user averages displayed | Partial: MDE + Entra signals | ✅ |
+| Shadow AI page, unmanaged AI metrics | Empty without `CloudAppEvents` | ✅ |
 | Shadow AI Catalog (MDA) | Yellow callout + empty visuals | Yellow callout + populated visuals |
 | Benchmarks & Targets sliders | ✅ | ✅ |
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| "We couldn't find the file" on load | Folder path missing trailing slash | Add trailing `\` (Windows) or `/` (macOS) |
+| "We couldn't find the file" on load | Folder path is incorrect or the expected CSV is missing | Confirm the folder and CSV filename shown in the error |
 | Shadow AI Catalog (MDA) visuals blank but no yellow callout | Stub CSV missing | Create the header-only CSVs from Path A instructions |
-| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export `ai_copilot_usage_graph.csv` from Purview Audit |
+| All Copilot prompt counts = 0 | Used Defender CloudAppEvents instead of Purview | Re-export both Copilot CSVs with `Collect-AICopilotUsage.ps1` |
 | Weekly Days Used per User > 7 | Old PBIT version | Re-download the latest PBIT; the measure is hard-capped at 7 |
 | "Behavioral Risk" page empty | Missing MDE Plan 2 export | Re-export `ai_file_proximity.csv` and `ai_offhours_geo.csv` |
 | Calendar slicer day-grain doesn't filter | Expected — fact tables are at month grain | Use Year / Quarter / Month slicer instead |
@@ -522,23 +525,31 @@ When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with rea
 
 **Architecture:** The v26 Unified PBIT replaces two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a single template that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly yellow overlay when the underlying data is empty. No conditional DAX logic is needed — empty CSVs simply produce empty visuals.
 
-**Tier model:** The report contains 10 pages total. Pages that work on E3+Copilot baseline: Executive Summary, Copilot Deep Dive, Dept Intensity by Solution, Department Breakdown, Benchmarks & Targets. Pages that need MDE Plan 2: Behavioral Risk, Shadow AI. MDA page: Shadow AI Catalog (MDA). Reference pages: Glossary & Data Dictionary, Tier Comparison.
+**Tier model:** The report contains 10 pages total. Executive Summary, Copilot Deep Dive, Benchmarks & Targets, and the reference pages use Graph/Purview or static data. Behavioral Risk uses MDE and Entra signals. Activity, Shadow AI, department-intensity, and department-breakdown visuals depend on `CloudAppEvents` from Defender for Cloud Apps. Shadow AI Catalog (MDA) uses Cloud Discovery.
 
-**Measures:** 122 total measures across 6 tables, including 5 interactive what-if parameter sliders, executive narrative verdicts, risk funnels, and department-level scatter quadrant analysis.
+**Measures:** 123 total measures across 7 tables, including 5 interactive what-if parameter sliders, executive narrative verdicts, risk funnels, department-level scatter quadrant analysis, and the dynamic Copilot-surface measure.
 
 **Empty-CSV fallback:** Rather than `try ... otherwise` in M (which can mask real refresh errors), customers create header-only stub CSVs. When MDA is later deployed, simply overwrite the stubs with real exports — same PBIT, no changes needed.
 
 **Generator pipeline:**
-```
-generate_pbit_v26_unified.py
-  ├─ Imports and extends the v22 NoMDA v2 generator
-  ├─ Adds 3 new tables: AI_AppGovAlerts, AI_CloudDiscovery, AI_MDA_Sessions
-  ├─ Defines 3 new MDA page builders + mda_callout helper
-  ├─ Patches page list: renames, appends MDA pages, rewrites Tier Comparison
-  └─ Outputs AI_Usage_v26_Unified.pbit
+```powershell
+python .\generate_pbit_v26_unified.py
+Get-FileHash '.\AI-Solutions-Intelligence-Dashboard V26 Validated.pbit' -Algorithm SHA256
 ```
 
-**CSV count:** 12 total (was 9 in v22 NoMDA). The 3 new MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`.
+The deterministic transformer:
+
+```
+generate_pbit_v26_unified.py
+  ├─ Reads AI-Solutions-Intelligence-Dashboard V26.pbit without modifying it
+  ├─ Patches DataModelSchema and synchronized UnappliedChanges metadata
+  ├─ Removes stale report-formatting selectors
+  ├─ Removes user-specific security bindings and MSIP sensitivity-label metadata
+  ├─ Preserves all remaining package entries and ZIP metadata
+  └─ Outputs AI-Solutions-Intelligence-Dashboard V26 Validated.pbit
+```
+
+**CSV count:** 13 total. `ai_copilot_surface_usage.csv` adds a normalized, future-compatible Copilot surface fact; the three MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`.
 
 </details>
 

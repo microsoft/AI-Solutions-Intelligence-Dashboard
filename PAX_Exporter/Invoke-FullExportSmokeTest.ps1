@@ -2,16 +2,17 @@
 .SYNOPSIS
     LIVE full-export smoke test for Invoke-AISolutionsExport.ps1: runs the REAL
     orchestrator with -IncludeSectionA over a small recent window and validates
-    that ALL TWELVE dashboard CSVs are produced with byte-exact header lines.
+    that ALL THIRTEEN dashboard CSVs are produced with byte-exact header lines.
 
 .DESCRIPTION
     Where Invoke-SmokeTest.ps1 exercises a SINGLE Defender Advanced Hunting
     preset, this wrapper drives the FULL dashboard export end-to-end through
     Invoke-AISolutionsExport.ps1 -IncludeSectionA and confirms the complete
-    twelve-artifact dashboard contract:
+    thirteen-artifact dashboard contract:
 
         Section-A (Graph / Purview / Entra / catalog):
-            EntraUsers.csv, ai_copilot_usage_graph.csv, ai_oauth_consents.csv,
+            EntraUsers.csv, ai_copilot_usage_graph.csv,
+            ai_copilot_surface_usage.csv, ai_oauth_consents.csv,
             ai_sso_signins.csv, ai_solutions_catalog.csv
         MDA stubs (header-only create-if-missing):
             ai_appgov_alerts.csv, ai_cloud_discovery.csv, ai_mda_sessions.csv
@@ -21,7 +22,7 @@
 
     A PASS means the orchestrator:
         * completed without throwing, AND
-        * produced every one of the twelve CSVs at -OutputDirectory, AND
+        * produced every one of the thirteen CSVs at -OutputDirectory, AND
         * each CSV's first line equals its expected header BYTE-EXACT
           (ordinal, case-sensitive comparison).
 
@@ -29,7 +30,7 @@
     header mismatch, plus HTTP-status guidance for the common 401 (bad/expired
     token) and 403 (missing consent) cases when the orchestrator throws.
 
-    HEADER QUOTING NOTE. The eight Section-A + MDA-stub CSVs are written with
+    HEADER QUOTING NOTE. The nine Section-A + MDA-stub CSVs are written with
     unquoted headers (Export-Csv -UseQuotes AsNeeded / Set-Content literal). The
     four Defender CSVs are written by Export-DefenderAdvancedHunting.ps1 via the
     default Export-Csv (RFC-4180 quote-all), so their header fields are wrapped
@@ -51,7 +52,7 @@
     through to the orchestrator. Defaults to today (local midnight).
 
 .PARAMETER OutputDirectory
-    Directory that receives all twelve produced CSVs. Defaults to a unique
+    Directory that receives all thirteen produced CSVs. Defaults to a unique
     subdirectory under the system temp directory. Created if it does not exist.
 
 .PARAMETER AccessToken
@@ -79,13 +80,13 @@
     to the orchestrator's -GraphQueryExecutor.
 
 .PARAMETER PurviewSearchExecutor
-    INJECTION SEAM FOR TESTING (Section-A Purview: ai_copilot_usage_graph). A
-    scriptblock passed straight through to the orchestrator's
-    -PurviewSearchExecutor.
+    INJECTION SEAM FOR TESTING (Section-A Purview:
+    ai_copilot_usage_graph.csv and ai_copilot_surface_usage.csv). A scriptblock
+    passed straight through to the orchestrator's -PurviewSearchExecutor.
 
 .PARAMETER SkipOrchestration
     TEST / RE-VALIDATION SEAM. When set, the orchestrator run is SKIPPED and
-    only the twelve-CSV byte-exact header validation of -OutputDirectory is
+    only the thirteen-CSV byte-exact header validation of -OutputDirectory is
     performed. This re-validates an existing output directory (for example one
     produced by a prior run) without re-exporting, and requires NO credentials
     or test seams. Default off preserves the full live run-then-validate flow.
@@ -93,7 +94,7 @@
 .EXAMPLE
     # (1) Interactive token: acquire a Graph token, then run the full export.
     Connect-MgGraph -Scopes 'ThreatHunting.Read.All','User.Read.All',`
-        'AuditLog.Read.All','Directory.Read.All'
+        'LicenseAssignment.Read.All','AuditLog.Read.All'
     $token = (Get-MgContext) ? (ConvertFrom-SecureString -AsPlainText `
         (Get-MgAccessToken)) : $null   # or use `az account get-access-token`
     .\Invoke-FullExportSmokeTest.ps1 -AccessToken $token `
@@ -124,23 +125,22 @@
 
     Live (non-mock) permissions required on the identity used:
         * ThreatHunting.Read.All   (Defender Advanced Hunting -- 4 CSVs)
-        * User.Read.All            (EntraUsers)
+        * User.Read.All            (EntraUsers and guest classification)
+        * LicenseAssignment.Read.All (license SKU resolution)
         * AuditLog.Read.All        (ai_oauth_consents, ai_sso_signins)
-        * Application.Read.All     (ai_oauth_consents app resolution)
-        * Directory.Read.All       (ai_sso_signins)
     All must be admin-consented.
 
-    Live Section-A A2 (ai_copilot_usage_graph.csv) relies on the caller's
-    AMBIENT Exchange Online session: run Connect-ExchangeOnline BEFORE this
-    harness so the Purview audit search can execute. The three MDA CSVs are
-    header-only stubs created by the orchestrator.
+    Live Section-A A2 (ai_copilot_usage_graph.csv and
+    ai_copilot_surface_usage.csv) relies on the caller's AMBIENT Exchange Online
+    session: run Connect-ExchangeOnline BEFORE this harness so the Purview audit
+    search can execute. The three MDA CSVs are header-only stubs created by the
+    orchestrator.
 
-    A Defender CSV that returns ZERO rows is written as an EMPTY file by the
-    exporter; because this harness validates the first line byte-exact, a
-    genuinely empty tenant window will report that artifact as a header
-    mismatch. Choose a window with known AI activity for a clean live PASS.
+    A Defender CSV that returns zero rows is written with its exact header by
+    the exporter, so a genuinely empty tenant window remains refresh-safe and
+    can still pass this harness's byte-exact header check.
 
-    Exit code: 0 on PASS (all twelve byte-exact), 1 on any FAIL.
+    Exit code: 0 on PASS (all thirteen byte-exact), 1 on any FAIL.
 #>
 [CmdletBinding()]
 param(
@@ -185,6 +185,7 @@ function Write-Fail {
 $expectedHeaders = [ordered]@{
     'EntraUsers.csv'             = 'userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,hasLicense,assignedLicenses,manager_displayName,manager_userPrincipalName'
     'ai_copilot_usage_graph.csv' = 'UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate'
+    'ai_copilot_surface_usage.csv' = 'UserPrincipalName,YearMonth,Surface,SourceWorkload,SourceAppHost,PromptCount,ActiveDays,LastActivityDate'
     'ai_oauth_consents.csv'      = 'UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions'
     'ai_sso_signins.csv'         = 'UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn'
     'ai_solutions_catalog.csv'   = 'AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup'
@@ -254,7 +255,7 @@ if (-not $SkipOrchestration) {
     Write-Host ("Auth            : {0}" -f $authLabel)
 
     # -----------------------------------------------------------------------
-    # Run the real orchestrator (full export, all twelve CSVs).
+    # Run the real orchestrator (full export, all thirteen CSVs).
     # -----------------------------------------------------------------------
     try {
         & $orchestrator @orchestratorArgs | Out-Null
@@ -276,7 +277,7 @@ else {
 }
 
 # ---------------------------------------------------------------------------
-# Validation: every one of the twelve CSVs must exist AND its first line must
+# Validation: every one of the thirteen CSVs must exist AND its first line must
 # equal the manifest header byte-exact (ordinal comparison). Collect ALL
 # failures; never stop at the first.
 # ---------------------------------------------------------------------------
@@ -305,7 +306,7 @@ foreach ($name in $expectedHeaders.Keys) {
 # Per-file PASS/FAIL table + verdict. Always print the summary before exiting.
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "==== full-export validation (12 CSVs) ====" -ForegroundColor White
+Write-Host "==== full-export validation (13 CSVs) ====" -ForegroundColor White
 $failCount = 0
 foreach ($r in $results) {
     $tag = if ($r.Pass) { 'PASS' } else { 'FAIL' }

@@ -1,10 +1,10 @@
 # AI Usage Dashboard v26 — Unified Edition Blueprint
 
-> **⚠️ Historical design document.** This blueprint captures the original design and planning rationale (a draft 16–18 page layout and the `v21`/`v22` generator lineage). The **shipped template** is `AI-Solutions-Intelligence-Dashboard V26.pbit` with **10 pages**: Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Shadow AI Catalog (MDA), Benchmarks & Targets, Glossary & Data Dictionary, Tier Comparison. See `README.md` → *Report Pages Overview* for the current layout. The page-tier table below is retained for design history only.
+> **⚠️ Historical design document.** This blueprint captures the original design and planning rationale (a draft 16–18 page layout and the `v21`/`v22` generator lineage). The **shipped template** is `AI-Solutions-Intelligence-Dashboard V26 Validated.pbit` with **10 pages**: Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Shadow AI Catalog (MDA), Benchmarks & Targets, Glossary & Data Dictionary, Tier Comparison. See `README.md` → *Report Pages Overview* for the current layout. The page-tier table below is retained for design history only.
 
 **Goal:** Replace the two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a **single PBIT** that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly overlay when the underlying data is empty.
 
-**Output file:** `AI_Usage_v26_Unified.pbit`
+**Output file:** `AI-Solutions-Intelligence-Dashboard V26 Validated.pbit`
 
 ---
 
@@ -12,14 +12,16 @@
 
 | License/Component | Tables it unlocks | Pages it powers |
 |---|---|---|
-| **M365 E3 + Copilot** (baseline) | `EntraUsers`, `AI_CopilotUsage` (Graph), `AI_OAuthConsents` (Entra), `AI_SSO_SignIns` (Entra), `AI_Solutions` (manual) | Exec Summary, Copilot Deep Dive, Benchmarks, Glossaries |
-| **+ Purview Audit** (E3 retains 180 d, E5 retains 365 d) | `AI_Activity` from `CopilotInteraction` records | Powers per-surface Copilot prompt counts (replaces Graph last-activity) |
-| **+ MDE Plan 2** (or E5) | `AI_FileProximity` (DeviceFileEvents), `AI_OffHoursGeo` (AADSignInEventsBeta), `AI_ClientChannel` (CloudAppEvents.UserAgent) | Behavioral Risk, Shadow AI, AI Client Channel, Dept Intensity |
+| **M365 E3 + Copilot** (baseline) | `EntraUsers`, `AI_OAuthConsents`, `AI_SSO_SignIns`, `AI_Solutions` | Identity, consent, sign-in, benchmarks, and reference visuals |
+| **+ Purview Audit** | `AI_CopilotUsage` and normalized `AI_CopilotSurfaceUsage` from `CopilotInteraction` records | Dynamic per-surface Copilot prompt counts; retention depends on licensing and audit policy |
+| **+ MDE Plan 2** (or E5) | `AI_FileProximity` (DeviceFileEvents + DeviceNetworkEvents), `AI_ClientChannel` (DeviceNetworkEvents) | File-proximity and client-channel signals |
+| **+ Entra data in Defender XDR** | `AI_OffHoursGeo` (`EntraIdSignInEvents`) | Off-hours and geographic anomaly signals |
+| **+ Defender for Cloud Apps** | `AI_Activity` (`CloudAppEvents`) | Activity, Shadow AI, and department activity visuals |
 | **+ MDA App Governance** (premium) | `AI_AppGovAlerts` | OAuth Anomaly Alerts (MDA) |
 | **+ MDA Cloud Discovery** (log uploader) | `AI_CloudDiscovery` | Cloud Discovery Catalog (MDA) |
 | **+ MDA-connected apps** (CASB) | `AI_MDA_Sessions` (CloudAppEvents enriched + CASSessionEvents) | MDA Session Intelligence (MDA) |
 
-Key insight: **only 3 net-new pages truly require MDA**. The other 10 work on E5 + MDE P2 alone — which is what most enterprise customers already own.
+The report loads with header-only files, but each visual only populates when its listed source is licensed, connected, and retained.
 
 ---
 
@@ -31,12 +33,12 @@ Legend: ✅ works on baseline · ⚙️ needs MDE P2 · 🛡️ needs MDA
 |---|---|---|---|---|
 | 1 | Executive Dashboard | 6 KPI cards, adoption rate, trend, donut, tool-count chart | EntraUsers, AI_Activity, AI_CopilotUsage, AI_Solutions, Calendar | ✅ |
 | 2 | Executive Summary | KPIs, adoption %, top tools, license gap | Same as above | ✅ |
-| 3 | Copilot Deep Dive | Per-surface prompts, Teams/Word/Excel/Outlook/PPT, license utilization | AI_CopilotUsage, EntraUsers | ✅ |
-| 4 | Shadow AI | Unmanaged AI users, Non-Microsoft activity, % using unmanaged | AI_Activity, AI_Solutions | ⚙️ partial — fully populated only with MDE P2 (DeviceNetworkEvents detects unsanctioned domains) |
+| 3 | Copilot Deep Dive | Dynamic per-surface prompts for all Purview-observed workloads, license utilization | AI_CopilotUsage, AI_CopilotSurfaceUsage, EntraUsers | ✅ |
+| 4 | Shadow AI | Unmanaged AI users, Non-Microsoft activity, % using unmanaged | AI_Activity, AI_Solutions | ⚙️ MDA required — populated from `CloudAppEvents`; MDE-only file-proximity and client-channel data do not populate this page. |
 | 5 | Dept Intensity by Solution | Bubble chart (weekly days vs weekly actions, capped at 7), tool slicer, dept ranking | AI_Activity, EntraUsers, AI_Solutions, Calendar | ✅ |
 | 6 | Department Breakdown | Dept × activity table, weekly action trend by AI site (filtered by dept) | Same as #5 | ✅ |
-| 7 | Behavioral Risk | Per-user-avg KPIs (activity, OAuth weight, risk score), file-proximity table, anomaly explanation, calc note | AI_Activity, AI_OAuthConsents, AI_FileProximity, AI_OffHoursGeo | ⚙️ FileProximity + OffHoursGeo come from MDE P2 / AADSignInEventsBeta (NOT MDA). Page name will not have MDA suffix. |
-| 8 | AI Client Channel | Stacked bar Browser/Desktop/API per AISite | AI_ClientChannel (CloudAppEvents.UserAgent) | ⚙️ |
+| 7 | Behavioral Risk | Per-user-avg KPIs (activity, OAuth weight, risk score), file-proximity table, anomaly explanation, calc note | AI_Activity, AI_OAuthConsents, AI_FileProximity, AI_OffHoursGeo | ⚙️ MDE provides file proximity; `EntraIdSignInEvents` provides off-hours/geo; MDA provides activity. |
+| 8 | AI Client Channel | Stacked bar Browser/Desktop/API per AISite | AI_ClientChannel (DeviceNetworkEvents process data) | ⚙️ |
 | 9 | User Drilldown | Per-user table with all signals | All UPN-keyed tables | ✅ partial / ⚙️ full |
 | 10 | Benchmarks & Targets | Adoption-vs-target gaps, threshold cards | AI Measures (constants) | ✅ |
 | **11** | **OAuth Anomaly Alerts (MDA)** | Alert table, severity breakdown, top apps, alert trend | **AI_AppGovAlerts** | 🛡️ |
@@ -48,7 +50,7 @@ Legend: ✅ works on baseline · ⚙️ needs MDE P2 · 🛡️ needs MDA
 
 ### Decision: rename the existing "Behavioral Risk MDA" page
 
-The user's PBIX renamed page 7 to "Behavioral Risk MDA", but the page **doesn't actually need MDA** — it uses MDE P2 (DeviceFileEvents) + Entra Audit Logs + AADSignInEventsBeta. Renaming it back to **"Behavioral Risk"** in the unified report. The new MDA pages get the `(MDA)` suffix.
+The user's PBIX renamed page 7 to "Behavioral Risk MDA". The shipped page is **"Behavioral Risk"** because its signals span MDE, Entra, Graph audit, and optional MDA activity rather than one product.
 
 ---
 
@@ -78,7 +80,7 @@ The visuals beneath render normally — empty if no data, populated if data is p
 To avoid Power Query errors when MDA CSVs are missing, the customer creates **header-only stub CSVs** (just the column row, no data). Example for `ai_appgov_alerts.csv`:
 
 ```csv
-Timestamp,UPN,AppName,AlertType,Severity,Description
+Timestamp,YearMonth,UPN,AppName,AlertType,Severity,Description
 ```
 
 The instructions document provides the exact stub content for each MDA CSV. Customers who later enable MDA simply overwrite the stub with the real export. **Reasoning:** simpler than `try ... otherwise` in M (which can mask real refresh errors).
@@ -92,8 +94,9 @@ The instructions document provides the exact stub content for each MDA CSV. Cust
 | `ai_appgov_alerts.csv` | B6 | OAuth Anomaly Alerts (MDA) | yes |
 | `ai_cloud_discovery.csv` | B7 | Cloud Discovery Catalog (MDA) | yes |
 | `ai_mda_sessions.csv` | B8 | MDA Session Intelligence (MDA) | yes |
+| `ai_copilot_surface_usage.csv` | A2 | Dynamic Copilot surface chart | no |
 
-Total CSV count in v26 = **12** (was 9 in v2 NoMDA). The 3 new MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`. Note: `ai_copilot_usage_graph.csv` can be sourced from either Purview Audit (recommended) or the Graph Reports API.
+Total CSV count in the validated template = **13**. The normalized `ai_copilot_surface_usage.csv` preserves all Purview-observed surfaces and raw `AppHost`/`Workload` provenance; `ai_copilot_usage_graph.csv` remains for compatibility. Both use Purview Audit because the Graph Reports endpoint does not expose the required per-surface count schema.
 
 ---
 
@@ -113,7 +116,7 @@ Customer's "tier" is now self-evident: which pages have data vs empty visuals.
 
 ## 7. Calendar table
 
-Already extended in v2 NoMDA to daily grain with Year/Quarter/Month/Day hierarchy. **Carries over unchanged.**
+The validated package uses a unique month-grain Calendar built from the `YearMonth` values present across all fact tables. Relationships are many-to-one and single-direction.
 
 ---
 
@@ -122,25 +125,13 @@ Already extended in v2 NoMDA to daily grain with Year/Quarter/Month/Day hierarch
 ```
 generate_pbit_v26_unified.py
   │
-  ├─ imports generate_pbit_v22_E5_NoMDA_v2.py  (which imports v21)
-  │       → reuses build_model_v2(), all rebuilt pages, all measures
-  │
-  ├─ extends model with 3 new tables:
-  │       AI_AppGovAlerts, AI_CloudDiscovery, AI_MDA_Sessions
-  │
-  ├─ defines 3 new page builders + 1 helper (mda_callout)
-  │
-  ├─ patches PAGES list:
-  │       - rename "Behavioral Risk MDA" → "Behavioral Risk"
-  │       - append: OAuth Anomaly Alerts (MDA)
-  │                 Cloud Discovery — Shadow AI Catalog (MDA)
-  │                 MDA Session Intelligence (MDA)
-  │       - rewrite: Tier Comparison (unified version)
-  │
-  └─ outputs AI_Usage_v26_Unified.pbit
+  ├─ reads the committed V26 PBIT without modifying it
+  ├─ patches DataModelSchema and synchronized UnappliedChanges
+  ├─ removes stale report formatting selectors
+  ├─ removes user-specific security bindings and MSIP sensitivity-label metadata
+  ├─ preserves all remaining package entries and ZIP metadata
+  └─ outputs AI-Solutions-Intelligence-Dashboard V26 Validated.pbit
 ```
-
-Old v22 generators stay in repo but are flagged DEPRECATED.
 
 ---
 
@@ -148,7 +139,7 @@ Old v22 generators stay in repo but are flagged DEPRECATED.
 
 A v26 build is "done" when:
 
-- [ ] PBIT opens cleanly when only the 9 baseline CSVs are present (3 MDA stubs OK)
+- [ ] PBIT opens cleanly when all 13 expected filenames exist, using exact header-only stubs for unavailable sources
 - [ ] All 10 baseline pages render data
 - [ ] All 3 MDA pages render their yellow overlay + visuals (visuals empty)
 - [ ] When real MDA CSVs are dropped in, the same PBIT lights up the visuals on next refresh — no PBIT change needed

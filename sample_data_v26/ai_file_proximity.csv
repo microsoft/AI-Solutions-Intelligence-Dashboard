@@ -1,0 +1,201 @@
+Timestamp,UPN,AISolution,YearMonth,FileName,FolderCategory,FolderPath,SecondsToAI,NameMatchesSensitivePattern,FolderMatchesSensitive
+2026-06-12T20:45:45Z,liam.beck@contoso.com,DeepSeek,2026-06,Notes.docx,Desktop,C:/Users/liam.beck/Documents/Desktop,35,0,0
+2025-12-15T23:14:44Z,evan.reed@contoso.com,Perplexity,2025-12,Q3_Forecast.xlsx,Documents,C:/Users/evan.reed/Documents/Documents,210,0,0
+2025-09-01T06:12:35Z,vlad.boyd@contoso.com,ChatGPT,2025-09,Notes.docx,Desktop,C:/Users/vlad.boyd/Documents/Desktop,109,0,0
+2026-03-23T00:18:47Z,ravi.iyer@contoso.com,DeepSeek,2026-03,Headcount.xlsx,Downloads,C:/Users/ravi.iyer/Documents/Downloads,265,0,0
+2025-12-23T22:45:49Z,mira.funk@contoso.com,Gemini,2025-12,Contract_v2.docx,SharePoint,C:/Users/mira.funk/Documents/SharePoint,133,0,1
+2026-03-17T09:08:12Z,kyle.brown@contoso.com,DeepSeek,2026-03,Roadmap.pptx,SharePoint,C:/Users/kyle.brown/Documents/SharePoint,139,0,0
+2026-06-11T07:26:50Z,pete.rios@contoso.com,Claude,2026-06,Headcount.xlsx,Downloads,C:/Users/pete.rios/Documents/Downloads,110,0,0
+2026-04-11T12:09:23Z,yuki.egan@contoso.com,Claude,2026-04,Budget_2026.xlsx,Downloads,C:/Users/yuki.egan/Documents/Downloads,86,0,1
+2026-06-12T21:46:41Z,mira.funk@contoso.com,ChatGPT,2026-06,Headcount.xlsx,Other,C:/Users/mira.funk/Documents/Other,266,0,0
+2026-01-18T12:40:36Z,ueli.zane@contoso.com,Midjourney,2026-01,Review.docx,Documents,C:/Users/ueli.zane/Documents/Documents,15,0,1
+2026-02-23T10:56:06Z,ella.hart@contoso.com,Microsoft 365 Copilot,2026-02,Specs.md,Downloads,C:/Users/ella.hart/Documents/Downloads,116,0,1
+2025-12-02T19:39:55Z,yara.adler@contoso.com,Microsoft 365 Copilot,2025-12,Contract_v2.docx,SharePoint,C:/Users/yara.adler/Documents/SharePoint,196,0,0
+2026-06-17T20:21:02Z,jack.tate@contoso.com,Perplexity,2026-06,Specs.md,Other,C:/Users/jack.tate/Documents/Other,277,0,0
+2025-12-05T02:44:22Z,hana.wong@contoso.com,Perplexity,2025-12,Budget_2026.xlsx,Documents,C:/Users/hana.wong/Documents/Documents,168,0,0
+2026-05-16T00:17:56Z,jade.singh@contoso.com,Claude,2026-05,Specs.md,Downloads,C:/Users/jade.singh/Documents/Downloads,45,0,1
+2025-11-26T16:04:12Z,ueli.zane@contoso.com,Gemini,2025-11,Headcount.xlsx,Documents,C:/Users/ueli.zane/Documents/Documents,7,0,0
+2025-12-11T22:02:18Z,finn.nash@contoso.com,DeepSeek,2025-12,Roadmap.pptx,Downloads,C:/Users/finn.nash/Documents/Downloads,79,0,0
+2025-12-08T23:47:27Z,jade.singh@contoso.com,Midjourney,2025-12,Roadmap.pptx,Documents,C:/Users/jade.singh/Documents/Documents,202,0,0
+2026-02-11T20:08:38Z,pete.rios@contoso.com,ChatGPT,2026-02,Contract_v2.docx,Other,C:/Users/pete.rios/Documents/Other,232,0,0
+2026-02-03T05:21:43Z,iris.lund@contoso.com,ChatGPT,2026-02,Budget_2026.xlsx,Downloads,C:/Users/iris.lund/Documents/Downloads,251,0,0
+2026-01-13T00:23:08Z,faye.diaz@contoso.com,Midjourney,2026-01,Specs.md,Other,C:/Users/faye.diaz/Documents/Other,67,0,0
+2025-11-19T20:10:16Z,hugo.cano@contoso.com,Perplexity,2025-11,Notes.docx,OneDrive,C:/Users/hugo.cano/Documents/OneDrive,146,1,0
+2026-03-24T11:04:58Z,eli.kemp@contoso.com,ChatGPT,2026-03,Review.docx,Documents,C:/Users/eli.kemp/Documents/Documents,179,0,0
+2026-02-06T18:08:58Z,seth.vogt@contoso.com,Microsoft 365 Copilot,2026-02,Contract_v2.docx,SharePoint,C:/Users/seth.vogt/Documents/SharePoint,225,0,0
+2025-12-13T07:43:02Z,tom.frey@contoso.com,Claude,2025-12,Headcount.xlsx,Documents,C:/Users/tom.frey/Documents/Documents,96,0,0
+2026-01-08T08:06:48Z,finn.nash@contoso.com,Midjourney,2026-01,Specs.md,SharePoint,C:/Users/finn.nash/Documents/SharePoint,160,0,0
+2025-12-08T03:31:30Z,seth.vogt@contoso.com,Midjourney,2025-12,Notes.docx,Desktop,C:/Users/seth.vogt/Documents/Desktop,126,0,0
+2026-05-12T02:33:27Z,sara.bell@contoso.com,Claude,2026-05,NDA_Draft.docx,SharePoint,C:/Users/sara.bell/Documents/SharePoint,28,0,0
+2025-10-03T02:14:06Z,quinn.ford@contoso.com,Midjourney,2025-10,Notes.docx,OneDrive,C:/Users/quinn.ford/Documents/OneDrive,70,0,0
+2026-01-10T16:06:37Z,jack.tate@contoso.com,Midjourney,2026-01,Notes.docx,Downloads,C:/Users/jack.tate/Documents/Downloads,17,0,0
+2025-11-05T22:12:50Z,ivan.petrov@contoso.com,GitHub Copilot,2025-11,Review.docx,Documents,C:/Users/ivan.petrov/Documents/Documents,202,0,0
+2026-03-06T06:14:27Z,zoey.frye@contoso.com,ChatGPT,2026-03,Notes.docx,Documents,C:/Users/zoey.frye/Documents/Documents,186,0,1
+2026-04-02T15:11:55Z,pete.rios@contoso.com,Midjourney,2026-04,Budget_2026.xlsx,SharePoint,C:/Users/pete.rios/Documents/SharePoint,109,0,0
+2026-02-25T13:37:38Z,vera.bose@contoso.com,Microsoft 365 Copilot,2026-02,Contract_v2.docx,Other,C:/Users/vera.bose/Documents/Other,41,0,0
+2026-03-26T14:03:43Z,alex.park@contoso.com,GitHub Copilot,2026-03,Roadmap.pptx,Desktop,C:/Users/alex.park/Documents/Desktop,268,0,0
+2025-10-26T14:04:43Z,omar.said@contoso.com,DeepSeek,2025-10,Notes.docx,Documents,C:/Users/omar.said/Documents/Documents,161,0,0
+2026-06-25T09:44:15Z,rosa.snow@contoso.com,Midjourney,2026-06,Contract_v2.docx,Other,C:/Users/rosa.snow/Documents/Other,259,0,0
+2026-06-24T07:29:17Z,cole.page@contoso.com,Perplexity,2026-06,Q3_Forecast.xlsx,Other,C:/Users/cole.page/Documents/Other,108,0,0
+2026-05-11T07:59:52Z,holly.otto@contoso.com,Perplexity,2026-05,Specs.md,Downloads,C:/Users/holly.otto/Documents/Downloads,48,0,0
+2026-02-21T04:20:08Z,cory.vance@contoso.com,Claude,2026-02,Q3_Forecast.xlsx,Other,C:/Users/cory.vance/Documents/Other,199,1,1
+2026-02-24T23:21:46Z,tina.wynn@contoso.com,ChatGPT,2026-02,Roadmap.pptx,SharePoint,C:/Users/tina.wynn/Documents/SharePoint,160,0,0
+2026-03-12T20:37:42Z,quinn.ford@contoso.com,Claude,2026-03,Salary_Bands.xlsx,Desktop,C:/Users/quinn.ford/Documents/Desktop,200,0,0
+2026-01-01T21:40:05Z,cory.vance@contoso.com,Midjourney,2026-01,Contract_v2.docx,Documents,C:/Users/cory.vance/Documents/Documents,259,0,0
+2025-09-08T17:34:36Z,jack.tate@contoso.com,Claude,2025-09,Budget_2026.xlsx,Other,C:/Users/jack.tate/Documents/Other,256,0,0
+2025-11-21T03:04:44Z,mason.cruz@contoso.com,Gemini,2025-11,Headcount.xlsx,Downloads,C:/Users/mason.cruz/Documents/Downloads,197,0,0
+2026-02-06T23:16:45Z,omar.said@contoso.com,Microsoft 365 Copilot,2026-02,Specs.md,Downloads,C:/Users/omar.said/Documents/Downloads,12,1,0
+2026-03-01T23:59:47Z,cole.page@contoso.com,Gemini,2026-03,Roadmap.pptx,OneDrive,C:/Users/cole.page/Documents/OneDrive,152,1,0
+2026-02-21T23:05:09Z,mason.cruz@contoso.com,Midjourney,2026-02,Review.docx,Documents,C:/Users/mason.cruz/Documents/Documents,269,0,0
+2025-11-10T02:46:52Z,fern.lowe@contoso.com,Microsoft 365 Copilot,2025-11,Headcount.xlsx,Desktop,C:/Users/fern.lowe/Documents/Desktop,290,0,0
+2025-10-25T22:29:56Z,noah.holt@contoso.com,Midjourney,2025-10,Review.docx,Documents,C:/Users/noah.holt/Documents/Documents,9,1,0
+2026-03-26T05:05:54Z,ella.hart@contoso.com,GitHub Copilot,2026-03,Salary_Bands.xlsx,OneDrive,C:/Users/ella.hart/Documents/OneDrive,267,1,1
+2026-05-23T15:00:04Z,beth.quinn@contoso.com,Gemini,2026-05,Specs.md,SharePoint,C:/Users/beth.quinn/Documents/SharePoint,259,0,0
+2026-05-05T13:11:36Z,gwen.webb@contoso.com,DeepSeek,2026-05,Budget_2026.xlsx,Downloads,C:/Users/gwen.webb/Documents/Downloads,186,0,0
+2026-01-10T04:28:00Z,vera.bose@contoso.com,Gemini,2026-01,Headcount.xlsx,Downloads,C:/Users/vera.bose/Documents/Downloads,72,0,0
+2026-03-01T01:55:25Z,ravi.iyer@contoso.com,DeepSeek,2026-03,Budget_2026.xlsx,Documents,C:/Users/ravi.iyer/Documents/Documents,79,0,1
+2026-05-25T15:13:09Z,sara.bell@contoso.com,Claude,2026-05,Roadmap.pptx,SharePoint,C:/Users/sara.bell/Documents/SharePoint,78,0,0
+2025-10-26T16:50:24Z,alex.park@contoso.com,ChatGPT,2025-10,Roadmap.pptx,SharePoint,C:/Users/alex.park/Documents/SharePoint,17,0,0
+2025-09-16T11:13:01Z,dana.cole@contoso.com,Microsoft 365 Copilot,2025-09,Specs.md,Other,C:/Users/dana.cole/Documents/Other,120,0,0
+2026-06-08T18:47:45Z,olga.pace@contoso.com,Claude,2026-06,Specs.md,OneDrive,C:/Users/olga.pace/Documents/OneDrive,92,1,1
+2026-03-15T04:09:29Z,beth.quinn@contoso.com,Claude,2026-03,Q3_Forecast.xlsx,SharePoint,C:/Users/beth.quinn/Documents/SharePoint,197,0,0
+2025-09-04T02:55:59Z,eli.kemp@contoso.com,Midjourney,2025-09,Salary_Bands.xlsx,Desktop,C:/Users/eli.kemp/Documents/Desktop,262,0,0
+2026-02-16T19:20:14Z,alex.park@contoso.com,DeepSeek,2026-02,Specs.md,Other,C:/Users/alex.park/Documents/Other,135,0,0
+2026-01-09T11:56:40Z,faye.diaz@contoso.com,Midjourney,2026-01,Budget_2026.xlsx,OneDrive,C:/Users/faye.diaz/Documents/OneDrive,85,0,0
+2025-10-16T06:38:23Z,vlad.boyd@contoso.com,Microsoft 365 Copilot,2025-10,Notes.docx,Other,C:/Users/vlad.boyd/Documents/Other,200,1,0
+2026-01-09T03:43:21Z,gwen.webb@contoso.com,GitHub Copilot,2026-01,NDA_Draft.docx,Desktop,C:/Users/gwen.webb/Documents/Desktop,15,0,0
+2026-01-22T08:53:24Z,will.toney@contoso.com,ChatGPT,2026-01,NDA_Draft.docx,Downloads,C:/Users/will.toney/Documents/Downloads,50,0,1
+2025-10-14T08:20:21Z,dora.judd@contoso.com,Microsoft 365 Copilot,2025-10,Q3_Forecast.xlsx,SharePoint,C:/Users/dora.judd/Documents/SharePoint,227,0,0
+2026-05-06T20:51:37Z,seth.vogt@contoso.com,Claude,2026-05,Specs.md,Documents,C:/Users/seth.vogt/Documents/Documents,183,0,0
+2026-04-13T20:41:14Z,cory.vance@contoso.com,Perplexity,2026-04,Salary_Bands.xlsx,OneDrive,C:/Users/cory.vance/Documents/OneDrive,183,1,1
+2026-01-16T20:21:16Z,priya.rao@contoso.com,Gemini,2026-01,Salary_Bands.xlsx,Downloads,C:/Users/priya.rao/Documents/Downloads,181,0,0
+2026-02-09T16:02:37Z,pete.rios@contoso.com,GitHub Copilot,2026-02,Salary_Bands.xlsx,Desktop,C:/Users/pete.rios/Documents/Desktop,223,1,0
+2026-02-02T01:24:08Z,faye.diaz@contoso.com,Midjourney,2026-02,Salary_Bands.xlsx,OneDrive,C:/Users/faye.diaz/Documents/OneDrive,276,0,0
+2025-10-22T11:24:03Z,ella.hart@contoso.com,ChatGPT,2025-10,NDA_Draft.docx,Desktop,C:/Users/ella.hart/Documents/Desktop,200,0,0
+2025-10-19T22:30:15Z,vera.bose@contoso.com,Microsoft 365 Copilot,2025-10,Review.docx,Documents,C:/Users/vera.bose/Documents/Documents,229,0,0
+2026-02-13T23:52:58Z,ravi.iyer@contoso.com,Claude,2026-02,Contract_v2.docx,Other,C:/Users/ravi.iyer/Documents/Other,177,0,0
+2026-01-07T06:50:44Z,seth.vogt@contoso.com,Claude,2026-01,Q3_Forecast.xlsx,Downloads,C:/Users/seth.vogt/Documents/Downloads,244,0,0
+2025-12-09T05:01:20Z,eli.kemp@contoso.com,Perplexity,2025-12,Headcount.xlsx,Downloads,C:/Users/eli.kemp/Documents/Downloads,46,1,1
+2025-09-18T02:28:38Z,ueli.zane@contoso.com,ChatGPT,2025-09,Budget_2026.xlsx,Desktop,C:/Users/ueli.zane/Documents/Desktop,195,0,1
+2026-01-10T02:36:36Z,alex.park@contoso.com,Claude,2026-01,Headcount.xlsx,Documents,C:/Users/alex.park/Documents/Documents,94,0,0
+2026-01-18T18:22:01Z,zane.voss@contoso.com,ChatGPT,2026-01,Q3_Forecast.xlsx,Other,C:/Users/zane.voss/Documents/Other,132,0,0
+2025-09-10T15:03:57Z,tina.wynn@contoso.com,Microsoft 365 Copilot,2025-09,Budget_2026.xlsx,Desktop,C:/Users/tina.wynn/Documents/Desktop,159,0,0
+2025-09-25T05:16:16Z,vlad.boyd@contoso.com,DeepSeek,2025-09,Salary_Bands.xlsx,SharePoint,C:/Users/vlad.boyd/Documents/SharePoint,234,0,0
+2026-02-16T18:37:48Z,iris.lund@contoso.com,ChatGPT,2026-02,Roadmap.pptx,Other,C:/Users/iris.lund/Documents/Other,227,0,0
+2026-01-20T14:13:22Z,alex.park@contoso.com,Claude,2026-01,Roadmap.pptx,Documents,C:/Users/alex.park/Documents/Documents,162,0,1
+2026-06-27T00:18:43Z,cole.page@contoso.com,Perplexity,2026-06,Specs.md,Other,C:/Users/cole.page/Documents/Other,239,1,0
+2026-05-14T23:37:28Z,evan.reed@contoso.com,GitHub Copilot,2026-05,Notes.docx,Downloads,C:/Users/evan.reed/Documents/Downloads,48,0,0
+2025-12-15T22:44:38Z,lena.mori@contoso.com,Perplexity,2025-12,Review.docx,OneDrive,C:/Users/lena.mori/Documents/OneDrive,242,0,0
+2026-03-06T01:11:25Z,adam.gore@contoso.com,Perplexity,2026-03,Headcount.xlsx,Downloads,C:/Users/adam.gore/Documents/Downloads,155,0,0
+2025-11-07T21:29:51Z,finn.nash@contoso.com,ChatGPT,2025-11,NDA_Draft.docx,SharePoint,C:/Users/finn.nash/Documents/SharePoint,120,0,1
+2026-03-03T04:09:15Z,cory.vance@contoso.com,DeepSeek,2026-03,Contract_v2.docx,OneDrive,C:/Users/cory.vance/Documents/OneDrive,277,0,0
+2026-06-20T12:48:44Z,iris.lund@contoso.com,Midjourney,2026-06,Specs.md,Documents,C:/Users/iris.lund/Documents/Documents,103,0,0
+2025-09-23T23:54:38Z,holly.otto@contoso.com,ChatGPT,2025-09,Headcount.xlsx,Documents,C:/Users/holly.otto/Documents/Documents,210,0,0
+2026-06-16T22:07:14Z,alex.park@contoso.com,Microsoft 365 Copilot,2026-06,Salary_Bands.xlsx,SharePoint,C:/Users/alex.park/Documents/SharePoint,234,0,0
+2026-04-23T02:22:26Z,tom.frey@contoso.com,Gemini,2026-04,Budget_2026.xlsx,Other,C:/Users/tom.frey/Documents/Other,62,1,0
+2025-09-14T07:31:32Z,xena.marsh@contoso.com,Midjourney,2025-09,Review.docx,Documents,C:/Users/xena.marsh/Documents/Documents,43,0,0
+2025-11-06T08:09:59Z,gabe.khan@contoso.com,ChatGPT,2025-11,Q3_Forecast.xlsx,Documents,C:/Users/gabe.khan/Documents/Documents,231,0,0
+2025-11-26T10:13:16Z,evan.reed@contoso.com,ChatGPT,2025-11,Q3_Forecast.xlsx,Desktop,C:/Users/evan.reed/Documents/Desktop,26,0,0
+2026-06-27T13:20:23Z,liam.beck@contoso.com,Claude,2026-06,Contract_v2.docx,Desktop,C:/Users/liam.beck/Documents/Desktop,289,0,0
+2026-06-01T13:05:07Z,finn.nash@contoso.com,Claude,2026-06,Roadmap.pptx,Downloads,C:/Users/finn.nash/Documents/Downloads,116,0,0
+2026-05-07T11:52:40Z,bella.hobbs@contoso.com,Midjourney,2026-05,Q3_Forecast.xlsx,OneDrive,C:/Users/bella.hobbs/Documents/OneDrive,71,0,1
+2025-12-18T09:15:52Z,bria.lee@contoso.com,Microsoft 365 Copilot,2025-12,Roadmap.pptx,SharePoint,C:/Users/bria.lee/Documents/SharePoint,35,0,0
+2026-01-19T16:42:01Z,rosa.snow@contoso.com,ChatGPT,2026-01,Salary_Bands.xlsx,Other,C:/Users/rosa.snow/Documents/Other,212,1,1
+2026-05-22T17:18:02Z,jenna.sims@contoso.com,Perplexity,2026-05,Review.docx,Other,C:/Users/jenna.sims/Documents/Other,184,0,0
+2026-02-08T01:53:23Z,cole.page@contoso.com,Microsoft 365 Copilot,2026-02,Headcount.xlsx,OneDrive,C:/Users/cole.page/Documents/OneDrive,224,0,0
+2026-04-15T11:21:51Z,kara.yost@contoso.com,Gemini,2026-04,Roadmap.pptx,Other,C:/Users/kara.yost/Documents/Other,174,0,1
+2026-02-03T11:06:40Z,dana.cole@contoso.com,Perplexity,2026-02,Headcount.xlsx,Downloads,C:/Users/dana.cole/Documents/Downloads,181,0,0
+2026-02-24T03:03:41Z,cory.vance@contoso.com,ChatGPT,2026-02,Q3_Forecast.xlsx,Documents,C:/Users/cory.vance/Documents/Documents,138,0,0
+2026-05-14T12:17:45Z,hugo.cano@contoso.com,Midjourney,2026-05,Specs.md,Other,C:/Users/hugo.cano/Documents/Other,25,0,0
+2026-06-25T23:07:15Z,hana.wong@contoso.com,Perplexity,2026-06,Q3_Forecast.xlsx,Desktop,C:/Users/hana.wong/Documents/Desktop,226,0,0
+2026-04-07T10:22:03Z,gwen.webb@contoso.com,ChatGPT,2026-04,Salary_Bands.xlsx,SharePoint,C:/Users/gwen.webb/Documents/SharePoint,189,0,0
+2026-02-09T09:21:33Z,finn.nash@contoso.com,GitHub Copilot,2026-02,Contract_v2.docx,Desktop,C:/Users/finn.nash/Documents/Desktop,9,0,0
+2026-05-15T01:07:22Z,drew.shaw@contoso.com,Gemini,2026-05,Headcount.xlsx,Desktop,C:/Users/drew.shaw/Documents/Desktop,120,1,0
+2025-12-20T09:20:34Z,beth.quinn@contoso.com,GitHub Copilot,2025-12,Roadmap.pptx,OneDrive,C:/Users/beth.quinn/Documents/OneDrive,231,0,0
+2025-09-26T09:52:00Z,fern.lowe@contoso.com,Gemini,2025-09,Q3_Forecast.xlsx,Desktop,C:/Users/fern.lowe/Documents/Desktop,150,0,0
+2026-02-09T12:54:30Z,yara.adler@contoso.com,Claude,2026-02,NDA_Draft.docx,Documents,C:/Users/yara.adler/Documents/Documents,47,0,0
+2026-03-02T00:36:17Z,beth.quinn@contoso.com,Claude,2026-03,Headcount.xlsx,Other,C:/Users/beth.quinn/Documents/Other,21,0,1
+2026-02-05T05:54:05Z,ivan.petrov@contoso.com,Microsoft 365 Copilot,2026-02,Review.docx,SharePoint,C:/Users/ivan.petrov/Documents/SharePoint,274,0,0
+2026-03-25T12:17:27Z,jade.singh@contoso.com,DeepSeek,2026-03,Contract_v2.docx,Desktop,C:/Users/jade.singh/Documents/Desktop,297,1,1
+2025-11-13T17:15:23Z,gabe.khan@contoso.com,Claude,2025-11,Salary_Bands.xlsx,Downloads,C:/Users/gabe.khan/Documents/Downloads,218,1,0
+2026-04-20T11:35:00Z,cole.page@contoso.com,ChatGPT,2026-04,NDA_Draft.docx,Downloads,C:/Users/cole.page/Documents/Downloads,280,0,0
+2026-05-19T20:12:02Z,omar.said@contoso.com,Perplexity,2026-05,Salary_Bands.xlsx,OneDrive,C:/Users/omar.said/Documents/OneDrive,199,1,0
+2026-03-23T07:02:49Z,alex.park@contoso.com,Microsoft 365 Copilot,2026-03,Headcount.xlsx,Desktop,C:/Users/alex.park/Documents/Desktop,69,0,1
+2025-12-20T09:55:53Z,jack.tate@contoso.com,Perplexity,2025-12,Q3_Forecast.xlsx,Downloads,C:/Users/jack.tate/Documents/Downloads,211,0,1
+2026-06-03T12:23:50Z,evan.reed@contoso.com,Claude,2026-06,NDA_Draft.docx,Other,C:/Users/evan.reed/Documents/Other,177,0,0
+2026-05-05T23:26:16Z,caleb.ives@contoso.com,DeepSeek,2026-05,NDA_Draft.docx,SharePoint,C:/Users/caleb.ives/Documents/SharePoint,195,0,0
+2026-01-27T23:07:39Z,vera.bose@contoso.com,Gemini,2026-01,Headcount.xlsx,SharePoint,C:/Users/vera.bose/Documents/SharePoint,168,0,0
+2026-03-03T08:33:45Z,kyle.brown@contoso.com,DeepSeek,2026-03,NDA_Draft.docx,SharePoint,C:/Users/kyle.brown/Documents/SharePoint,40,1,1
+2025-09-18T06:46:47Z,vera.bose@contoso.com,Midjourney,2025-09,Specs.md,SharePoint,C:/Users/vera.bose/Documents/SharePoint,259,0,0
+2026-03-18T18:53:20Z,uma.roy@contoso.com,Perplexity,2026-03,Contract_v2.docx,Other,C:/Users/uma.roy/Documents/Other,86,0,0
+2026-06-25T01:22:17Z,ella.hart@contoso.com,DeepSeek,2026-06,Specs.md,Desktop,C:/Users/ella.hart/Documents/Desktop,4,0,0
+2025-09-21T05:33:21Z,ivan.petrov@contoso.com,Claude,2025-09,Roadmap.pptx,Desktop,C:/Users/ivan.petrov/Documents/Desktop,78,0,0
+2026-03-06T21:13:32Z,ella.hart@contoso.com,Gemini,2026-03,Contract_v2.docx,OneDrive,C:/Users/ella.hart/Documents/OneDrive,132,1,0
+2025-12-02T22:27:54Z,mira.funk@contoso.com,Microsoft 365 Copilot,2025-12,Notes.docx,OneDrive,C:/Users/mira.funk/Documents/OneDrive,31,0,0
+2025-11-17T08:06:26Z,beth.quinn@contoso.com,Perplexity,2025-11,Headcount.xlsx,Other,C:/Users/beth.quinn/Documents/Other,97,0,0
+2025-11-20T16:58:20Z,mira.funk@contoso.com,Perplexity,2025-11,Specs.md,OneDrive,C:/Users/mira.funk/Documents/OneDrive,65,0,0
+2025-09-02T07:56:24Z,dana.cole@contoso.com,Gemini,2025-09,Contract_v2.docx,Documents,C:/Users/dana.cole/Documents/Documents,286,0,0
+2026-06-11T15:51:26Z,evan.reed@contoso.com,Perplexity,2026-06,Specs.md,Downloads,C:/Users/evan.reed/Documents/Downloads,187,1,0
+2025-10-18T03:32:00Z,bria.lee@contoso.com,Microsoft 365 Copilot,2025-10,NDA_Draft.docx,OneDrive,C:/Users/bria.lee/Documents/OneDrive,214,0,0
+2026-05-15T20:36:37Z,vlad.boyd@contoso.com,Claude,2026-05,Budget_2026.xlsx,Downloads,C:/Users/vlad.boyd/Documents/Downloads,34,1,0
+2026-01-16T05:31:55Z,evan.reed@contoso.com,Midjourney,2026-01,Specs.md,Desktop,C:/Users/evan.reed/Documents/Desktop,292,0,0
+2026-02-19T02:12:26Z,gabe.khan@contoso.com,DeepSeek,2026-02,Specs.md,Documents,C:/Users/gabe.khan/Documents/Documents,25,0,1
+2025-12-11T21:30:13Z,uma.roy@contoso.com,GitHub Copilot,2025-12,Salary_Bands.xlsx,Downloads,C:/Users/uma.roy/Documents/Downloads,97,0,0
+2025-10-20T06:31:52Z,liam.beck@contoso.com,Microsoft 365 Copilot,2025-10,Specs.md,Documents,C:/Users/liam.beck/Documents/Documents,270,0,0
+2026-04-02T15:08:56Z,ueli.zane@contoso.com,Midjourney,2026-04,Notes.docx,Downloads,C:/Users/ueli.zane/Documents/Downloads,38,0,0
+2025-12-01T23:09:36Z,faye.diaz@contoso.com,GitHub Copilot,2025-12,Roadmap.pptx,Downloads,C:/Users/faye.diaz/Documents/Downloads,147,0,0
+2026-04-13T20:36:03Z,bella.hobbs@contoso.com,Microsoft 365 Copilot,2026-04,Notes.docx,Desktop,C:/Users/bella.hobbs/Documents/Desktop,294,0,0
+2026-01-16T16:28:44Z,jack.tate@contoso.com,Microsoft 365 Copilot,2026-01,NDA_Draft.docx,SharePoint,C:/Users/jack.tate/Documents/SharePoint,209,0,0
+2026-06-16T19:18:52Z,ueli.zane@contoso.com,Gemini,2026-06,Specs.md,Documents,C:/Users/ueli.zane/Documents/Documents,300,0,0
+2026-06-25T17:47:02Z,ueli.zane@contoso.com,Gemini,2026-06,Review.docx,Documents,C:/Users/ueli.zane/Documents/Documents,13,1,1
+2026-03-25T03:05:28Z,beth.quinn@contoso.com,ChatGPT,2026-03,Q3_Forecast.xlsx,SharePoint,C:/Users/beth.quinn/Documents/SharePoint,155,1,1
+2026-06-15T00:05:32Z,will.toney@contoso.com,Midjourney,2026-06,Q3_Forecast.xlsx,Downloads,C:/Users/will.toney/Documents/Downloads,16,0,0
+2025-12-19T10:25:57Z,quinn.ford@contoso.com,ChatGPT,2025-12,Roadmap.pptx,Downloads,C:/Users/quinn.ford/Documents/Downloads,130,0,0
+2025-11-21T08:23:47Z,fern.lowe@contoso.com,Claude,2025-11,Notes.docx,Downloads,C:/Users/fern.lowe/Documents/Downloads,46,1,0
+2025-12-07T16:35:56Z,cory.vance@contoso.com,Microsoft 365 Copilot,2025-12,Specs.md,SharePoint,C:/Users/cory.vance/Documents/SharePoint,126,0,0
+2026-03-20T08:03:34Z,gwen.webb@contoso.com,Microsoft 365 Copilot,2026-03,Budget_2026.xlsx,Downloads,C:/Users/gwen.webb/Documents/Downloads,278,0,0
+2025-09-13T07:58:48Z,eli.kemp@contoso.com,Gemini,2025-09,Notes.docx,Documents,C:/Users/eli.kemp/Documents/Documents,14,0,0
+2025-10-18T01:32:37Z,yara.adler@contoso.com,ChatGPT,2025-10,NDA_Draft.docx,OneDrive,C:/Users/yara.adler/Documents/OneDrive,156,0,0
+2026-05-24T05:46:44Z,ian.pratt@contoso.com,GitHub Copilot,2026-05,Budget_2026.xlsx,Other,C:/Users/ian.pratt/Documents/Other,101,0,0
+2026-03-02T09:38:46Z,zoey.frye@contoso.com,Claude,2026-03,Budget_2026.xlsx,SharePoint,C:/Users/zoey.frye/Documents/SharePoint,160,0,0
+2025-10-04T02:44:07Z,uma.roy@contoso.com,DeepSeek,2025-10,Salary_Bands.xlsx,Desktop,C:/Users/uma.roy/Documents/Desktop,49,0,0
+2026-04-20T22:53:13Z,kara.yost@contoso.com,Microsoft 365 Copilot,2026-04,NDA_Draft.docx,Other,C:/Users/kara.yost/Documents/Other,160,0,0
+2026-01-17T15:23:02Z,jack.tate@contoso.com,DeepSeek,2026-01,Contract_v2.docx,Downloads,C:/Users/jack.tate/Documents/Downloads,126,0,0
+2026-06-26T01:58:08Z,cory.vance@contoso.com,Claude,2026-06,Salary_Bands.xlsx,OneDrive,C:/Users/cory.vance/Documents/OneDrive,63,0,0
+2026-02-20T22:20:07Z,rosa.snow@contoso.com,DeepSeek,2026-02,Headcount.xlsx,Desktop,C:/Users/rosa.snow/Documents/Desktop,55,0,0
+2025-09-18T01:06:44Z,will.toney@contoso.com,Claude,2025-09,Contract_v2.docx,SharePoint,C:/Users/will.toney/Documents/SharePoint,75,0,0
+2025-12-19T20:34:55Z,olga.pace@contoso.com,ChatGPT,2025-12,Review.docx,OneDrive,C:/Users/olga.pace/Documents/OneDrive,43,0,0
+2026-03-08T21:36:23Z,hana.wong@contoso.com,Microsoft 365 Copilot,2026-03,Q3_Forecast.xlsx,Documents,C:/Users/hana.wong/Documents/Documents,29,1,0
+2026-02-09T06:02:26Z,hugo.cano@contoso.com,DeepSeek,2026-02,Budget_2026.xlsx,Other,C:/Users/hugo.cano/Documents/Other,120,0,0
+2026-06-08T19:54:52Z,beth.quinn@contoso.com,Claude,2026-06,Headcount.xlsx,Documents,C:/Users/beth.quinn/Documents/Documents,52,1,1
+2026-02-14T00:36:16Z,evan.reed@contoso.com,Perplexity,2026-02,Salary_Bands.xlsx,OneDrive,C:/Users/evan.reed/Documents/OneDrive,6,1,1
+2025-10-21T19:11:34Z,lena.mori@contoso.com,Microsoft 365 Copilot,2025-10,Budget_2026.xlsx,Desktop,C:/Users/lena.mori/Documents/Desktop,263,0,0
+2025-12-25T11:35:09Z,bria.lee@contoso.com,Perplexity,2025-12,Specs.md,OneDrive,C:/Users/bria.lee/Documents/OneDrive,162,0,0
+2026-06-11T00:18:04Z,zoey.frye@contoso.com,Perplexity,2026-06,Notes.docx,Desktop,C:/Users/zoey.frye/Documents/Desktop,296,0,0
+2025-12-21T00:59:38Z,adam.gore@contoso.com,Microsoft 365 Copilot,2025-12,Headcount.xlsx,OneDrive,C:/Users/adam.gore/Documents/OneDrive,234,0,0
+2025-11-23T02:47:13Z,lena.mori@contoso.com,Gemini,2025-11,Roadmap.pptx,Other,C:/Users/lena.mori/Documents/Other,19,0,0
+2026-03-08T11:56:54Z,seth.vogt@contoso.com,ChatGPT,2026-03,Headcount.xlsx,SharePoint,C:/Users/seth.vogt/Documents/SharePoint,122,0,0
+2026-02-15T07:24:48Z,ivan.petrov@contoso.com,Perplexity,2026-02,Specs.md,OneDrive,C:/Users/ivan.petrov/Documents/OneDrive,295,0,0
+2025-12-01T11:14:56Z,dora.judd@contoso.com,Microsoft 365 Copilot,2025-12,Contract_v2.docx,Other,C:/Users/dora.judd/Documents/Other,143,0,1
+2026-03-12T22:30:47Z,fern.lowe@contoso.com,DeepSeek,2026-03,Q3_Forecast.xlsx,OneDrive,C:/Users/fern.lowe/Documents/OneDrive,176,0,0
+2026-05-13T22:46:31Z,fern.lowe@contoso.com,Midjourney,2026-05,Notes.docx,Other,C:/Users/fern.lowe/Documents/Other,222,0,0
+2026-01-17T00:18:36Z,priya.rao@contoso.com,Claude,2026-01,NDA_Draft.docx,OneDrive,C:/Users/priya.rao/Documents/OneDrive,287,0,0
+2025-10-11T16:34:10Z,iris.lund@contoso.com,DeepSeek,2025-10,Budget_2026.xlsx,SharePoint,C:/Users/iris.lund/Documents/SharePoint,47,1,0
+2025-12-10T02:04:20Z,omar.said@contoso.com,Gemini,2025-12,Salary_Bands.xlsx,Other,C:/Users/omar.said/Documents/Other,221,0,0
+2026-04-22T01:08:09Z,bria.lee@contoso.com,Microsoft 365 Copilot,2026-04,Notes.docx,Other,C:/Users/bria.lee/Documents/Other,235,0,0
+2025-10-17T05:47:57Z,ella.hart@contoso.com,ChatGPT,2025-10,Contract_v2.docx,Downloads,C:/Users/ella.hart/Documents/Downloads,259,0,1
+2025-12-26T02:53:33Z,kara.yost@contoso.com,Gemini,2025-12,Review.docx,Documents,C:/Users/kara.yost/Documents/Documents,36,0,0
+2025-12-24T07:53:43Z,yuki.egan@contoso.com,Gemini,2025-12,Notes.docx,Downloads,C:/Users/yuki.egan/Documents/Downloads,15,0,0
+2025-09-12T05:51:39Z,nora.hale@contoso.com,Perplexity,2025-09,Notes.docx,Documents,C:/Users/nora.hale/Documents/Documents,112,0,0
+2026-06-22T15:58:49Z,sara.bell@contoso.com,DeepSeek,2026-06,NDA_Draft.docx,Desktop,C:/Users/sara.bell/Documents/Desktop,42,0,0
+2026-01-13T09:00:55Z,bria.lee@contoso.com,Gemini,2026-01,Roadmap.pptx,Other,C:/Users/bria.lee/Documents/Other,235,0,0
+2026-06-07T13:41:27Z,holly.otto@contoso.com,DeepSeek,2026-06,Roadmap.pptx,Other,C:/Users/holly.otto/Documents/Other,160,1,0
+2025-09-20T03:35:21Z,kyle.brown@contoso.com,Midjourney,2025-09,Roadmap.pptx,SharePoint,C:/Users/kyle.brown/Documents/SharePoint,218,0,0
+2025-11-22T09:03:27Z,gus.mata@contoso.com,DeepSeek,2025-11,Review.docx,Downloads,C:/Users/gus.mata/Documents/Downloads,234,0,0
+2025-10-12T21:57:19Z,jack.tate@contoso.com,Claude,2025-10,Review.docx,Downloads,C:/Users/jack.tate/Documents/Downloads,103,0,0
+2026-03-25T11:48:31Z,gwen.webb@contoso.com,Gemini,2026-03,Headcount.xlsx,Desktop,C:/Users/gwen.webb/Documents/Desktop,200,0,0
+2025-10-04T23:48:11Z,jack.tate@contoso.com,GitHub Copilot,2025-10,Q3_Forecast.xlsx,Other,C:/Users/jack.tate/Documents/Other,291,0,0
+2025-11-16T14:58:32Z,ella.hart@contoso.com,Midjourney,2025-11,Budget_2026.xlsx,Documents,C:/Users/ella.hart/Documents/Documents,21,1,0
+2025-09-16T12:36:15Z,yuki.egan@contoso.com,ChatGPT,2025-09,Budget_2026.xlsx,Documents,C:/Users/yuki.egan/Documents/Documents,249,1,1
+2026-04-10T16:11:03Z,ximena.dent@contoso.com,Claude,2026-04,Review.docx,SharePoint,C:/Users/ximena.dent/Documents/SharePoint,172,0,0
+2026-01-24T11:10:54Z,seth.vogt@contoso.com,Claude,2026-01,NDA_Draft.docx,Other,C:/Users/seth.vogt/Documents/Other,113,0,1

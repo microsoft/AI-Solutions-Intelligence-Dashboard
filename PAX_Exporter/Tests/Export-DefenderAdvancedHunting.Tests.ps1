@@ -146,8 +146,8 @@ if ($pester5) {
         $localChecks = $checks
         $container = {
             Describe 'Export-DefenderAdvancedHunting adaptive time-slicing' {
-                foreach ($c in $localChecks) {
-                    It $c.Name { $c.Pass | Should -BeTrue }
+                It '<Name>' -ForEach $localChecks {
+                    $Pass | Should -BeTrue
                 }
             }
         }

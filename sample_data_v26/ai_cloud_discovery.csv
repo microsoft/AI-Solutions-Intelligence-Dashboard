@@ -1,0 +1,41 @@
+AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,TransactionCount,DistinctUsers,SanctionStatus
+perplexity.ai,Generative AI,2026-01,9,2583.14,3664.5,4079,6,Under Review
+perplexity.ai,Generative AI,2025-11,1,3832.68,1160.61,3576,32,Under Review
+perplexity.ai,Generative AI,2026-02,6,2398.61,2887.43,2892,30,Unsanctioned
+perplexity.ai,Generative AI,2025-11,4,2130.42,2781.7,4417,1,Under Review
+perplexity.ai,Generative AI,2025-11,2,3297.1,3648.56,365,18,Sanctioned
+claude.ai,Generative AI,2025-09,5,3874.14,4048.32,574,11,Sanctioned
+perplexity.ai,Generative AI,2026-06,8,615.54,2067.93,4372,21,Sanctioned
+perplexity.ai,Generative AI,2026-06,10,4117.67,1355.55,3946,36,Under Review
+claude.ai,Generative AI,2025-12,10,2331.46,491.56,3415,20,Under Review
+perplexity.ai,Generative AI,2026-04,4,436.78,3989.28,3631,45,Sanctioned
+chat.openai.com,Generative AI,2026-01,3,2500.79,758.26,3007,16,Sanctioned
+claude.ai,Generative AI,2026-02,1,2845.79,2250.37,3262,9,Unsanctioned
+deepseek.com,Generative AI,2025-10,5,233.7,1525.91,1513,58,Sanctioned
+chat.openai.com,Generative AI,2026-02,3,2610.24,610.65,700,37,Unsanctioned
+claude.ai,Generative AI,2026-05,3,2685.51,3292.59,4136,56,Sanctioned
+gemini.google.com,Generative AI,2025-12,6,1387.53,469.7,4219,26,Unsanctioned
+perplexity.ai,Generative AI,2026-06,4,548.8,4789.23,2901,46,Unsanctioned
+claude.ai,Generative AI,2025-11,2,869.35,1788.69,2954,57,Unsanctioned
+perplexity.ai,Generative AI,2026-03,4,1626.3,2654.95,3254,55,Sanctioned
+perplexity.ai,Generative AI,2026-04,1,264.76,3376.8,4466,12,Under Review
+perplexity.ai,Generative AI,2026-05,7,2488.72,2392.04,1502,58,Sanctioned
+gemini.google.com,Generative AI,2025-12,6,1819.11,3999.24,1875,57,Under Review
+perplexity.ai,Generative AI,2025-11,6,2906.82,1563.93,2479,59,Under Review
+claude.ai,Generative AI,2026-03,1,4042.68,2500.5,2858,17,Unsanctioned
+deepseek.com,Generative AI,2025-10,2,4334.12,1765.5,4128,6,Sanctioned
+chat.openai.com,Generative AI,2026-03,2,2970.41,1654.45,1961,15,Sanctioned
+claude.ai,Generative AI,2026-04,4,491.58,4760.73,4999,55,Unsanctioned
+perplexity.ai,Generative AI,2026-03,7,1210.04,1967.0,4541,49,Sanctioned
+deepseek.com,Generative AI,2026-02,4,4733.36,4546.13,4168,5,Sanctioned
+chat.openai.com,Generative AI,2026-01,7,2085.53,3844.33,3073,45,Unsanctioned
+claude.ai,Generative AI,2026-03,9,1260.81,3074.8,4395,33,Under Review
+perplexity.ai,Generative AI,2026-01,10,1054.53,76.58,3691,53,Sanctioned
+deepseek.com,Generative AI,2026-02,10,1043.18,1750.58,956,19,Under Review
+gemini.google.com,Generative AI,2025-11,4,3397.26,696.97,1732,39,Unsanctioned
+deepseek.com,Generative AI,2026-02,6,73.95,372.88,2548,50,Sanctioned
+perplexity.ai,Generative AI,2026-06,9,1085.71,2100.45,3331,46,Sanctioned
+chat.openai.com,Generative AI,2026-05,6,1897.9,4065.77,1050,32,Under Review
+claude.ai,Generative AI,2026-06,3,2197.6,2631.26,2864,20,Under Review
+perplexity.ai,Generative AI,2026-06,4,779.02,151.52,588,15,Sanctioned
+deepseek.com,Generative AI,2026-04,8,1017.53,4989.96,2908,59,Under Review

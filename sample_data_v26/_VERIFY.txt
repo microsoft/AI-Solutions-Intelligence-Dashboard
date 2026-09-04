@@ -1,0 +1,93 @@
+AI Solutions Test Data - Verification Report
+Generated: deterministic
+Seed: 20260504
+Output folder: sample_data_v26
+======================================================================
+FILE: EntraUsers.csv
+  ROWS (excl header): 60
+  HEADER: userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,hasLicense,assignedLicenses,manager_displayName,manager_userPrincipalName
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_solutions_catalog.csv
+  ROWS (excl header): 8
+  HEADER: AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_activity_sessions.csv
+  ROWS (excl header): 428
+  HEADER: UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_oauth_consents.csv
+  ROWS (excl header): 70
+  HEADER: UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_sso_signins.csv
+  ROWS (excl header): 80
+  HEADER: UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_file_proximity.csv
+  ROWS (excl header): 200
+  HEADER: Timestamp,UPN,AISolution,YearMonth,FileName,FolderCategory,FolderPath,SecondsToAI,NameMatchesSensitivePattern,FolderMatchesSensitive
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_offhours_geo.csv
+  ROWS (excl header): 90
+  HEADER: UPN,YearMonth,TotalSessions,OffHoursSessions,OffHoursPct,DistinctCountries,AnomalousCountryCount,AnomalousCountries
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_copilot_usage_graph.csv
+  ROWS (excl header): 173
+  HEADER: UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_copilot_surface_usage.csv
+  ROWS (excl header): 1730
+  HEADER: UserPrincipalName,YearMonth,Surface,SourceWorkload,SourceAppHost,PromptCount,ActiveDays,LastActivityDate
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_client_channel.csv
+  ROWS (excl header): 60
+  HEADER: AISite,Channel,YearMonth,EventCount
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_appgov_alerts.csv
+  ROWS (excl header): 50
+  HEADER: Timestamp,YearMonth,UPN,AppName,AlertType,Severity,Description
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_cloud_discovery.csv
+  ROWS (excl header): 40
+  HEADER: AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,TransactionCount,DistinctUsers,SanctionStatus
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+FILE: ai_mda_sessions.csv
+  ROWS (excl header): 80
+  HEADER: Timestamp,YearMonth,UPN,AppName,ActionType,PolicyHit,PolicyAction,IPAddress,CountryCode,EventCount
+  HEADER CONTRACT: PASS
+----------------------------------------------------------------------
+REFERENTIAL INTEGRITY CHECKS
+  ai_activity_sessions AISolution all in catalog: PASS
+  ai_activity_sessions UPN all in EntraUsers: PASS
+  ai_file_proximity AISolution all in catalog: PASS
+  ai_copilot_usage_graph UPN all in EntraUsers: PASS
+  ai_copilot_surface_usage UPN all in EntraUsers: PASS
+  Copilot legacy totals match normalized surface totals: PASS
+  Activity RiskTier values are canonical: PASS
+  Catalog RiskTier values are canonical: PASS
+  EntraUsers.csv accountEnabled uses TRUE/FALSE: PASS
+  EntraUsers.csv hasLicense uses TRUE/FALSE: PASS
+  ai_sso_signins.csv IsGuest uses TRUE/FALSE: PASS
+  ai_sso_signins.csv HasConditionalAccess uses TRUE/FALSE: PASS
+  ai_mda_sessions.csv PolicyHit uses TRUE/FALSE: PASS
+  ai_mda_sessions.csv PolicyAction values are canonical: PASS
+  ai_activity_sessions.csv ActiveDays, EstimatedPrompts, and DistinctDevices do not exceed Sessions: PASS
+  ai_sso_signins.csv DistinctDays does not exceed SignInCount: PASS
+  ai_offhours_geo.csv AnomalousCountryCount does not exceed DistinctCountries minus one: PASS
+  ai_file_proximity.csv SecondsToAI is within the production 300-second window: PASS
+  ai_file_proximity.csv FolderCategory uses production values: PASS
+  ai_client_channel.csv Channel uses production values: PASS
+  'Microsoft 365 Copilot' exact in catalog: PASS
+  EntraUsers with 'Copilot' in assignedLicenses: 40

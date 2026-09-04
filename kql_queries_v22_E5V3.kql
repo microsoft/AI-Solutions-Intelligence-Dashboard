@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // This file contains all PowerShell scripts and KQL (Kusto Query Language)
-// queries needed to populate the dashboard's 12 CSV data files.
+// queries needed to populate the dashboard's 13 CSV data files.
 //
 // v26.1 changes vs. original v26 (all validated against a live tenant):
 //   B2  — Removed over-broad ActionType OR filter (was pulling SharePoint/Teams/
@@ -23,11 +23,11 @@
 // Section A = PowerShell / Graph scripts (run in PowerShell 7+)
 // Section B = KQL queries (run in Defender XDR → Advanced Hunting)
 //
-// NOTE ON ENVIRONMENT: Queries are validated against Microsoft Sentinel's
-// Advanced Hunting workspace. Column name differences vs. native Defender XDR:
-//   AADSignInEventsBeta.Country     (Sentinel) vs. CountryCode (native Def XDR)
-//   AlertEvidence.AdditionalFields  stored as string in Sentinel, dynamic in XDR
-//   See per-section comments for the relevant switch if running in native XDR.
+// NOTE ON ENVIRONMENT: Queries target Microsoft Defender XDR Advanced Hunting.
+// Table availability depends on licensed and connected products:
+// CloudAppEvents requires Defender for Cloud Apps; DeviceFileEvents and
+// DeviceNetworkEvents require Defender for Endpoint; EntraIdSignInEvents
+// requires the corresponding Entra data in Defender XDR.
 //
 // IMPORTANT: Each query's output columns must EXACTLY match the schemas below.
 //            Do NOT rename columns — Power Query expects these exact headers.
@@ -36,8 +36,8 @@
 //   - PowerShell 7+ with Microsoft.Graph and ExchangeOnlineManagement modules
 //   - Microsoft Defender XDR portal access (Security Reader minimum)
 //   - Microsoft Purview Audit access (Audit Reader or eDiscovery Manager)
-//   - Permissions: User.Read.All, Directory.Read.All, Reports.Read.All,
-//                  AuditLog.Read.All, Application.Read.All
+//   - Permissions: User.Read.All, LicenseAssignment.Read.All,
+//                  AuditLog.Read.All, ThreatHunting.Read.All
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -52,7 +52,11 @@
 //         assignedLicenses, manager_displayName, manager_userPrincipalName
 //
 // <powershell>
-// Connect-MgGraph -Scopes "User.Read.All","Directory.Read.All"
+// Connect-MgGraph -Scopes "User.Read.All","LicenseAssignment.Read.All"
+// $skuById = @{}
+// Get-MgSubscribedSku -All | ForEach-Object {
+//     $skuById[$_.SkuId.ToString()] = $_.SkuPartNumber
+// }
 //
 // Get-MgUser -All `
 //   -Property "userPrincipalName,displayName,department,jobTitle,city,country,companyName,accountEnabled,userType,createdDateTime,assignedLicenses,manager" `
@@ -60,36 +64,37 @@
 //   Select-Object userPrincipalName, displayName, department, jobTitle, city, country, companyName,
 //                 accountEnabled, userType, createdDateTime,
 //     @{n='hasLicense';e={ if ($_.AssignedLicenses.Count -gt 0) {'TRUE'} else {'FALSE'} }},
-//     @{n='assignedLicenses';e={ ($_.AssignedLicenses.SkuId) -join ';' }},
+//     @{n='assignedLicenses';e={
+//         ($_.AssignedLicenses | ForEach-Object {
+//             $id = $_.SkuId.ToString()
+//             if ($skuById.ContainsKey($id)) { $skuById[$id] } else { $id }
+//         }) -join ';'
+//     }},
 //     @{n='manager_displayName';      e={ $_.Manager.AdditionalProperties.displayName }},
 //     @{n='manager_userPrincipalName';e={ $_.Manager.AdditionalProperties.userPrincipalName }} |
 //   Export-Csv -NoTypeInformation -Encoding UTF8 EntraUsers.csv
 //
-// # Optional: Replace Copilot SKU GUID with a readable label
-// (Get-Content EntraUsers.csv) -replace '05e9a617-0261-4cee-bb44-138d3ef5d965','Copilot_M365' |
-//   Set-Content EntraUsers.csv
 // </powershell>
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION A2 — ai_copilot_usage_graph.csv (PowerShell / Purview Audit)
+// SECTION A2 — Copilot usage CSVs (PowerShell / Purview Audit)
 // ─────────────────────────────────────────────────────────────────────────────
 // Run in: PowerShell 7+ (requires ExchangeOnlineManagement module)
-// Output: ai_copilot_usage_graph.csv
+// Outputs: ai_copilot_usage_graph.csv, ai_copilot_surface_usage.csv
 // Schema: UserPrincipalName, YearMonth, TeamsPrompts, WordPrompts, ExcelPrompts,
 //         OutlookPrompts, PowerPointPrompts, ChatPrompts, TotalPrompts,
 //         ActiveDays, LastActivityDate
 //
-// This query searches Purview Audit for CopilotInteraction events, pivots them
-// by workload (Teams/Word/Excel/Outlook/PowerPoint/Chat) per user per month.
+// This query searches Purview Audit for CopilotInteraction events. AppHost is
+// nested under CopilotEventData in the current audit schema; Workload is retained
+// as source metadata and used only as a fallback when AppHost is absent.
 //
 // NOTE: The Power Query table is named AI_CopilotUsage and loads from
 //       "ai_copilot_usage_graph.csv". Name your output file accordingly.
 //
-// ALTERNATIVE: If you prefer the Graph Reports API (simpler but less granular):
-//   GET https://graph.microsoft.com/v1.0/reports/getMicrosoft365CopilotUsageUserDetail(period='D90')
-//   Save the response as ai_copilot_usage_graph.csv. The Graph API returns the
-//   same column schema. Use Purview for richer per-surface prompt counts.
+// The Graph Reports user-detail endpoint does NOT return this count schema and
+// cannot be saved directly under this filename.
 //
 // <powershell>
 // # 1. Connect to Exchange Online (Purview audit uses EXO cmdlets)
@@ -110,29 +115,47 @@
 //         -SessionId $sessionId `
 //         -SessionCommand ReturnLargeSet
 //     if ($batch) { $allEvents += $batch }
-// } while ($batch.Count -eq 5000)
+// } while ($batch.Count -gt 0)
+// if ($allEvents.Count -ge 50000) {
+//     throw "Purview reached its 50,000-record session limit. Use PAX_Exporter\Collect-AICopilotUsage.ps1, which recursively splits saturated windows."
+// }
 //
 // Write-Host "Retrieved $($allEvents.Count) CopilotInteraction events"
 //
-// # 4. Parse audit data and extract workload + user
+// # 4. Parse audit data and extract surface + user
 // $parsed = $allEvents | ForEach-Object {
 //     $data = $_.AuditData | ConvertFrom-Json
+//     $appHost = [string]$data.CopilotEventData.AppHost
+//     if ([string]::IsNullOrWhiteSpace($appHost)) {
+//         $appHost = [string]$data.AppHost # Backward compatibility for older exports.
+//     }
+//     $rawSurface = if ([string]::IsNullOrWhiteSpace($appHost)) {
+//         [string]$data.Workload
+//     } else {
+//         $appHost
+//     }
 //     [PSCustomObject]@{
-//         UPN       = $data.UserId.ToLower()
-//         YearMonth = $data.CreationDate.ToString("yyyy-MM")
-//         Date      = $data.CreationDate.ToString("yyyy-MM-dd")
-//         Workload  = switch ($data.Workload) {
+//         UPN            = $data.UserId.ToLower()
+//         YearMonth      = ([datetime]$data.CreationTime).ToString("yyyy-MM")
+//         Date           = ([datetime]$data.CreationTime).ToString("yyyy-MM-dd")
+//         SourceWorkload = [string]$data.Workload
+//         SourceAppHost  = $appHost
+//         Surface        = switch ($rawSurface) {
 //             "MicrosoftTeams" { "Teams" }
+//             "Teams"          { "Teams" }
 //             "Word"           { "Word" }
 //             "Excel"          { "Excel" }
 //             "Outlook"        { "Outlook" }
 //             "PowerPoint"     { "PowerPoint" }
+//             "BizChat"        { "Chat" }
 //             "Bing"           { "Chat" }
+//             "Office"         { "Chat" }
+//             "M365App"        { "Chat" }
 //             "M365Chat"       { "Chat" }
 //             "Microsoft365"   { "Chat" }
-//             default          { $data.Workload }
+//             default          { $rawSurface }
 //         }
-//         Prompts   = if ($data.CopilotEventData.Prompts) {
+//         Prompts        = if ($data.CopilotEventData.Prompts) {
 //                         $data.CopilotEventData.Prompts.Count
 //                     } else { 1 }
 //     }
@@ -146,17 +169,17 @@
 //     $days     = ($grp | Select-Object -ExpandProperty Date -Unique).Count
 //     $lastDate = ($grp | Sort-Object Date | Select-Object -Last 1).Date
 //
-//     $teams = ($grp | Where-Object Workload -eq "Teams" |
+//     $teams = ($grp | Where-Object Surface -eq "Teams" |
 //               Measure-Object Prompts -Sum).Sum
-//     $word  = ($grp | Where-Object Workload -eq "Word" |
+//     $word  = ($grp | Where-Object Surface -eq "Word" |
 //               Measure-Object Prompts -Sum).Sum
-//     $excel = ($grp | Where-Object Workload -eq "Excel" |
+//     $excel = ($grp | Where-Object Surface -eq "Excel" |
 //               Measure-Object Prompts -Sum).Sum
-//     $outl  = ($grp | Where-Object Workload -eq "Outlook" |
+//     $outl  = ($grp | Where-Object Surface -eq "Outlook" |
 //               Measure-Object Prompts -Sum).Sum
-//     $ppt   = ($grp | Where-Object Workload -eq "PowerPoint" |
+//     $ppt   = ($grp | Where-Object Surface -eq "PowerPoint" |
 //               Measure-Object Prompts -Sum).Sum
-//     $chat  = ($grp | Where-Object Workload -eq "Chat" |
+//     $chat  = ($grp | Where-Object Surface -eq "Chat" |
 //               Measure-Object Prompts -Sum).Sum
 //
 //     [PSCustomObject]@{
@@ -168,7 +191,7 @@
 //         OutlookPrompts    = [int]$outl
 //         PowerPointPrompts = [int]$ppt
 //         ChatPrompts       = [int]$chat
-//         TotalPrompts      = [int]($teams + $word + $excel + $outl + $ppt + $chat)
+//         TotalPrompts      = [int](($grp | Measure-Object Prompts -Sum).Sum)
 //         ActiveDays        = $days
 //         LastActivityDate  = $lastDate
 //     }
@@ -176,6 +199,24 @@
 //
 // $pivoted | Export-Csv -NoTypeInformation -Encoding UTF8 ai_copilot_usage_graph.csv
 // Write-Host "Exported $($pivoted.Count) user-month rows to ai_copilot_usage_graph.csv"
+//
+// $normalized = $parsed |
+//   Group-Object UPN, YearMonth, Surface, SourceWorkload, SourceAppHost |
+//   ForEach-Object {
+//       $grp = $_.Group
+//       [PSCustomObject]@{
+//           UserPrincipalName = $grp[0].UPN
+//           YearMonth         = $grp[0].YearMonth
+//           Surface           = $grp[0].Surface
+//           SourceWorkload    = $grp[0].SourceWorkload
+//           SourceAppHost     = $grp[0].SourceAppHost
+//           PromptCount       = [int](($grp | Measure-Object Prompts -Sum).Sum)
+//           ActiveDays        = ($grp | Select-Object -ExpandProperty Date -Unique).Count
+//           LastActivityDate  = ($grp | Sort-Object Date | Select-Object -Last 1).Date
+//       }
+//   }
+// $normalized | Export-Csv -NoTypeInformation -Encoding UTF8 ai_copilot_surface_usage.csv
+// Write-Host "Exported $($normalized.Count) surface rows to ai_copilot_surface_usage.csv"
 // </powershell>
 
 
@@ -188,7 +229,7 @@
 //         PermissionWeight, Permissions
 //
 // <powershell>
-// Connect-MgGraph -Scopes "AuditLog.Read.All","Application.Read.All"
+// Connect-MgGraph -Scopes "AuditLog.Read.All"
 //
 // $startDate = (Get-Date).AddDays(-180).ToString("yyyy-MM-ddTHH:mm:ssZ")
 //
@@ -273,7 +314,11 @@
 //         Countries, HasConditionalAccess, LastSignIn
 //
 // <powershell>
-// Connect-MgGraph -Scopes "AuditLog.Read.All","Directory.Read.All"
+// Connect-MgGraph -Scopes "AuditLog.Read.All","User.Read.All"
+// $userTypeByUpn = @{}
+// Get-MgUser -All -Property "userPrincipalName,userType" | ForEach-Object {
+//     $userTypeByUpn[$_.UserPrincipalName.ToLower()] = $_.UserType
+// }
 //
 // $startDate = (Get-Date).AddDays(-90).ToString("yyyy-MM-ddTHH:mm:ssZ")
 //
@@ -286,7 +331,7 @@
 // # Fetch sign-in logs (may take a few minutes for large tenants)
 // $signIns = Get-MgAuditLogSignIn -All `
 //     -Filter "createdDateTime ge $startDate" `
-//     -Property "userPrincipalName,appDisplayName,createdDateTime,location,userType,conditionalAccessStatus,status"
+//     -Property "userPrincipalName,appDisplayName,createdDateTime,location,conditionalAccessStatus,status"
 //
 // # Filter to AI apps and successful sign-ins
 // $aiSignIns = $signIns | Where-Object {
@@ -303,7 +348,8 @@
 //         Date      = $_.CreatedDateTime.ToString("yyyy-MM-dd")
 //         YearMonth = $_.CreatedDateTime.ToString("yyyy-MM")
 //         Country   = $_.Location.CountryOrRegion
-//         IsGuest   = if ($_.UserType -eq "Guest") { "TRUE" } else { "FALSE" }
+//         IsGuest   = if ($userTypeByUpn[$_.UserPrincipalName.ToLower()] -eq "Guest" -or
+//                        $_.UserPrincipalName -like "*#EXT#*") { "TRUE" } else { "FALSE" }
 //         HasCA     = if ($_.ConditionalAccessStatus -eq "success") { "TRUE" } else { "FALSE" }
 //     }
 // }
@@ -421,7 +467,8 @@
 //       when they are reverse-proxied through MDA Conditional Access App Control.
 
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot", "Bing Chat",
+    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot Studio",
+    "Security Copilot", "Copilot", "Bing Chat",
     "ChatGPT", "OpenAI", "Claude", "Anthropic",
     "Gemini", "Bard", "Perplexity", "Midjourney",
     "Grammarly", "Notion", "Jasper", "Adobe Firefly",
@@ -432,11 +479,13 @@ let AIAppNames = dynamic([
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
-| where Timestamp > ago(180d)
+| where Timestamp > ago(30d)
 | where Application has_any (AIAppNames)
 | extend AISolution = case(
-    Application has "Copilot" or Application has "Microsoft 365 Copilot", "Microsoft 365 Copilot",
     Application has "GitHub Copilot", "GitHub Copilot",
+    Application has "Copilot Studio", "Copilot Studio",
+    Application has "Security Copilot", "Security Copilot",
+    Application has "Microsoft 365 Copilot" or Application has "Microsoft Copilot" or Application has "Copilot", "Microsoft 365 Copilot",
     Application has "ChatGPT" or Application has "OpenAI", "ChatGPT",
     Application has "Claude" or Application has "Anthropic", "Claude",
     Application has "Gemini" or Application has "Bard", "Gemini",
@@ -452,20 +501,30 @@ CloudAppEvents
     Application has "Hugging Face", "Hugging Face",
     Application has "Canva", "Canva AI",
     Application has "Stability", "Stability AI",
-    ""  // empty fallback — unrecognised apps dropped by isnotempty() below
+    Application
 )
 | where isnotempty(AISolution)
 | lookup kind=leftouter UserUpns on AccountObjectId
 | extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
+| extend DeviceKey = coalesce(
+    tostring(RawEventData.DeviceId),
+    tostring(RawEventData.deviceId),
+    tostring(IPAddress),
+    tostring(DeviceType),
+    "Unknown"
+)
 | summarize
     Sessions = count(),
     ActiveDays = dcount(bin(Timestamp, 1d)),
     EstimatedPrompts = countif(ActionType in ("MessageSent", "SearchPerformed", "AppAccessedViaAPI")),
-    DistinctDevices = dcount(DeviceType)
+    DistinctDevices = dcount(DeviceKey)
     by UPN, AISolution, YearMonth
 | extend Category = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution in ("Microsoft 365 Copilot", "Bing Chat Enterprise"), "Productivity",
+    AISolution == "GitHub Copilot", "Development",
+    AISolution == "Copilot Studio", "Business Automation",
+    AISolution == "Security Copilot", "Security AI",
     AISolution in ("ChatGPT", "Claude", "Gemini", "Perplexity"), "General AI",
     AISolution in ("Midjourney", "DALL-E", "Stability AI", "Adobe Firefly"), "Image Generation",
     AISolution in ("Grammarly", "Jasper"), "Writing",
@@ -474,7 +533,7 @@ CloudAppEvents
     "Other"
 )
 | extend RiskTier = case(
-    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise"), "Sanctioned",
+    AISolution in ("Microsoft 365 Copilot", "GitHub Copilot", "Bing Chat Enterprise", "Copilot Studio", "Security Copilot"), "Sanctioned",
     AISolution in ("ChatGPT", "Adobe Firefly", "Grammarly", "DALL-E", "Canva AI"), "Conditional",
     "Unsanctioned"
 )
@@ -518,7 +577,7 @@ let SensitiveFolderPatterns = dynamic([
 // Step 1: Find AI site visits
 let AIVisits =
     DeviceNetworkEvents
-    | where Timestamp > ago(90d)
+    | where Timestamp > ago(30d)
     | where ActionType == "ConnectionSuccess"
     | where RemoteUrl has_any (AIDomains)
     | extend AISolution = case(
@@ -543,7 +602,7 @@ let AIVisits =
 // Step 2: Find file access events
 let FileAccess =
     DeviceFileEvents
-    | where Timestamp > ago(90d)
+    | where Timestamp > ago(30d)
     | where ActionType in ("FileCreated", "FileModified", "FileRenamed", "FileCopied")
     | where FileName !endswith ".tmp" and FileName !endswith ".log"
     | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
@@ -572,7 +631,7 @@ AIVisits
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION B4 — ai_offhours_geo.csv (AADSignInEventsBeta)
+// SECTION B4 — ai_offhours_geo.csv (EntraIdSignInEvents)
 // ─────────────────────────────────────────────────────────────────────────────
 // Run in: Defender XDR → Advanced Hunting
 // Output: ai_offhours_geo.csv
@@ -583,22 +642,8 @@ AIVisits
 // primary timezone if needed.
 // Anomalous country = any country other than the user's most frequent sign-in country.
 //
-// FIXES applied (validated June 2026 against live tenant):
-//   1. Country field: replaced tostring(LocationDetails.countryOrRegion) with
-//      coalesce(Country, "Unknown"). The LocationDetails dot-notation fails in
-//      both native Defender XDR and Sentinel schemas.
-//      Schema note:
-//        Sentinel Advanced Hunting workspace  → column is "Country" (string)
-//        Native Defender XDR Advanced Hunting → column is "CountryCode" (2-letter ISO)
-//      This query uses "Country" (Sentinel). If running in native Defender XDR,
-//      replace: | extend Country = coalesce(Country, "Unknown")
-//          with: | extend Country = coalesce(CountryCode, "Unknown")
-//   2. AnomalousCountries: replaced dynamic([PrimaryCountry]) with
-//      pack_array(PrimaryCountry). dynamic([...]) only accepts literals —
-//      column references inside dynamic() cause a parse error.
-//      Confirmed fix: row with DistinctCountries=2 now correctly shows
-//      AnomalousCountryCount=1 and AnomalousCountries="AU".
-//   3. Removed unused AIDomains variable (AIAppNames is sufficient).
+// Uses the supported EntraIdSignInEvents table. pack_array(PrimaryCountry)
+// accepts the column value used by set_difference().
 
 let AIAppNames = dynamic([
     "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
@@ -608,8 +653,8 @@ let AIAppNames = dynamic([
 ]);
 // Step 1: Identify AI-related sign-ins
 let AISignIns =
-    AADSignInEventsBeta
-    | where Timestamp > ago(90d)
+    EntraIdSignInEvents
+    | where Timestamp > ago(30d)
     | where ErrorCode == 0  // successful sign-ins only
     | where Application has_any (AIAppNames)
         or ResourceDisplayName has_any (AIAppNames)
@@ -617,7 +662,7 @@ let AISignIns =
     | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
     | extend HourOfDay = hourofday(Timestamp)
     | extend IsOffHours = iff(HourOfDay < 7 or HourOfDay >= 19, 1, 0)
-    | extend Country = coalesce(Country, "Unknown")  // FIX 1: use direct column
+    | extend Country = coalesce(Country, "Unknown")
     | project UPN, YearMonth, Timestamp, IsOffHours, Country;
 // Step 2: Compute per-user primary country (for anomaly detection)
 let UserPrimaryCountry =
@@ -635,7 +680,7 @@ AISignIns
     by UPN, YearMonth
 | extend OffHoursPct = round(todouble(OffHoursSessions) / todouble(TotalSessions), 4)
 | join kind=leftouter UserPrimaryCountry on UPN
-| extend AnomalousCountries = set_difference(Countries, pack_array(PrimaryCountry))  // FIX 2
+| extend AnomalousCountries = set_difference(Countries, pack_array(PrimaryCountry))
 | extend AnomalousCountryCount = array_length(AnomalousCountries)
 | extend AnomalousCountries = iff(AnomalousCountryCount > 0,
     strcat_array(AnomalousCountries, "; "), "")
@@ -662,7 +707,7 @@ let AIDomains = dynamic([
     "runwayml.com", "canva.com", "app.synthesia.io"
 ]);
 DeviceNetworkEvents
-| where Timestamp > ago(90d)
+| where Timestamp > ago(30d)
 | where ActionType == "ConnectionSuccess"
 | where RemoteUrl has_any (AIDomains)
 | extend AISite = case(
@@ -729,12 +774,12 @@ let AIAppNames = dynamic([
     "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
 ]);
 AlertInfo
-| where Timestamp > ago(180d)
+| where Timestamp > ago(30d)
 | where ServiceSource == "Microsoft Cloud App Security"
     or ServiceSource == "Microsoft Defender for Cloud Apps"
 | join kind=inner (
     AlertEvidence
-    | where Timestamp > ago(180d)
+    | where Timestamp > ago(30d)
     | where EntityType == "User" or EntityType == "CloudApplication"
     | extend EvidenceDetail = case(
         EntityType == "User", AccountUpn,
@@ -846,7 +891,7 @@ let AIAppNames = dynamic([
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
 CloudAppEvents
-| where Timestamp > ago(90d)
+| where Timestamp > ago(30d)
 | where Application has_any (AIAppNames)
 | where ActionType in (
     "FileUploaded", "FileDownloaded", "FilePreviewed",
@@ -857,11 +902,11 @@ CloudAppEvents
 | lookup kind=leftouter UserUpns on AccountObjectId          // FIX 1
 | extend UPN = tolower(coalesce(AccountUpn, AccountObjectId))
 | extend YearMonth = format_datetime(Timestamp, "yyyy-MM")
-| extend PolicyHit = tostring(RawEventData.PolicyName)
+| extend PolicyName = tostring(RawEventData.PolicyName)
+| extend PolicyHit = iff(isnotempty(PolicyName), "TRUE", "FALSE")
 | extend PolicyAction = case(
     ActionType has "Blocked", "Block",
-    ActionType has "Monitor", "Monitor",
-    isnotempty(PolicyHit), "Alert",
+    ActionType has "Warn" or ActionType has "Monitor" or PolicyHit == "TRUE", "Warn",
     "Allow"
 )
 | extend IPAddress = tostring(IPAddress)

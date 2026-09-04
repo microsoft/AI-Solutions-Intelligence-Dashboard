@@ -14,7 +14,7 @@ $PSVersionTable.PSVersion
 
 You need `Major` to be `7` or higher. If it isn't, install [PowerShell 7+](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) first.
 
-**Graph permission.** The identity you sign in with (your token, or your app registration) must have the Microsoft Graph permission **`ThreatHunting.Read.All`**. If you don't have it yet, see [authentication.md](authentication.md).
+**Graph permissions.** A full 13-file export requires **`ThreatHunting.Read.All`**, **`User.Read.All`**, **`LicenseAssignment.Read.All`**, and **`AuditLog.Read.All`**, all admin-consented. You also need an account that can run Microsoft Purview audit search through `Search-UnifiedAuditLog`. If you don't have these yet, see [authentication.md](authentication.md).
 
 ---
 
@@ -23,9 +23,15 @@ You need `Major` to be `7` or higher. If it isn't, install [PowerShell 7+](https
 Pick one path:
 
 - **Access token (fastest):** grab a bearer token and keep it handy. Tokens expire after about an hour. How to get one is in [authentication.md](authentication.md#path-a--bring-your-own-access-token).
-- **App registration (repeatable):** register an app, grant `ThreatHunting.Read.All`, create a client secret. Steps in [authentication.md](authentication.md#path-b--app-registration-client-credentials).
+- **App registration (repeatable):** register an app, grant all four Graph permissions listed above, and create a client secret. Steps in [authentication.md](authentication.md#path-b--app-registration-client-credentials).
 
 > Never paste a token or secret into a file. You will pass it on the command line at runtime.
+
+Before running the full export, establish the interactive Exchange Online/Purview session used for Copilot audit data:
+
+```powershell
+Connect-ExchangeOnline
+```
 
 ---
 
@@ -55,20 +61,20 @@ Replace every `<PLACEHOLDER>` with your real value:
 
 **Using an access token:**
 ```powershell
-.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>'
+.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>' -IncludeSectionA
 ```
 
 **Using an app registration** — run Command 1 first (it will prompt you to type your secret), then Command 2:
 ```powershell
 $secret = Read-Host -AsSecureString 'Client secret'
-.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
+.\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret -IncludeSectionA
 ```
 
 | Placeholder | What to put there |
 |---|---|
 | `<START_DATE>` | Start of your date window, e.g. `2026-01-01` |
 | `<END_DATE>` | End of your date window (exclusive), e.g. `2026-07-01` |
-| `C:\AI_Usage_Data` | Folder where you want the 12 CSV files saved |
+| `C:\AI_Usage_Data` | Folder where you want the 13 CSV files saved |
 | `<YOUR_ACCESS_TOKEN>` | The token you copied from Graph Explorer or Azure CLI |
 | `<TENANT_ID>` | Entra admin center → your app → **Directory (tenant) ID** |
 | `<CLIENT_ID>` | Entra admin center → your app → **Application (client) ID** |

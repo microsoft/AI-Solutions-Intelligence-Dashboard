@@ -66,8 +66,8 @@ function Add-CaseResult {
 #   causes the exporter's internal $executeWindow scriptblock to return an
 #   empty array, which the call site now re-wraps with @(...) so an empty
 #   window yields an empty array ($rows.Count == 0) instead of unrolling to
-#   $null. The queue drains cleanly, and the output stage writes an empty CSV
-#   artifact via Set-Content '' when there are zero final rows. The real
+#   $null. The queue drains cleanly, and the output stage writes a header-only
+#   CSV when -OutputColumns is supplied. The real
 #   Microsoft Graph executor returns @() on no results too, so this is the
 #   tool's genuine empty-window behavior on the live path as well.
 #
@@ -90,6 +90,7 @@ try {
         -EndDate   ([datetime]'2026-06-02T00:00:00Z') `
         -TimeColumn 'Timestamp' `
         -OutputPath $outA `
+        -OutputColumns @('Timestamp','Id','Payload') `
         -RowCap $rowCap `
         -QueryExecutor $emptyMock
 }
@@ -101,11 +102,12 @@ $artifactA = Test-Path $outA
 $totalRowsA = if ($summaryA) { $summaryA.TotalRows } else { -1 }
 $partsA = if ($summaryA) { $summaryA.PartitionsExecuted } else { -1 }
 $csvRowsA = if ($artifactA) { @(Import-Csv -Path $outA).Count } else { -1 }
+$headerA = if ($artifactA) { @(Get-Content -LiteralPath $outA)[0] } else { '' }
 # Reality after fix: no throw; summary TotalRows == 0; at least one partition
 # executed; an (empty) CSV artifact exists at the output path with 0 data rows.
-$passA = (-not $threwA) -and ($null -ne $summaryA) -and ($totalRowsA -eq 0) -and ($partsA -ge 1) -and $artifactA -and ($csvRowsA -eq 0)
-Add-CaseResult -Name 'a. empty/zero-row export (no throw; TotalRows==0; empty CSV artifact written)' -Pass $passA `
-    -Detail ("threw={0}; TotalRows={1}; PartitionsExecuted={2}; artifact={3}; csvRows={4}; msg='{5}'" -f $threwA, $totalRowsA, $partsA, $artifactA, $csvRowsA, $msgA)
+$passA = (-not $threwA) -and ($null -ne $summaryA) -and ($totalRowsA -eq 0) -and ($partsA -ge 1) -and $artifactA -and ($csvRowsA -eq 0) -and ($headerA -ceq '"Timestamp","Id","Payload"')
+Add-CaseResult -Name 'a. empty/zero-row export (no throw; TotalRows==0; header-only CSV written)' -Pass $passA `
+    -Detail ("threw={0}; TotalRows={1}; PartitionsExecuted={2}; artifact={3}; csvRows={4}; header='{5}'; msg='{6}'" -f $threwA, $totalRowsA, $partsA, $artifactA, $csvRowsA, $headerA, $msgA)
 Remove-Item $outA -ErrorAction SilentlyContinue
 
 # ===========================================================================

@@ -2,7 +2,7 @@
     Preset.OffHoursGeo.Tests.ps1
 
     CREDENTIAL-FREE substitution smoke test for the
-    presets/AADSignInEventsBeta_ai_offhours_geo.kql preset (slice B2).
+    presets/EntraIdSignInEvents_ai_offhours_geo.kql preset (slice B2).
 
     Verifies that the preset carries the EXACT dashboard aggregate schema
     (Section B4 of kql_queries_v22_E5V3.kql) and that it substitutes correctly
@@ -40,7 +40,7 @@ $null = Get-Random -SetSeed 20260603
 $scriptPath = Join-Path $PSScriptRoot '..\Export-DefenderAdvancedHunting.ps1'
 $scriptPath = (Resolve-Path $scriptPath).Path
 
-$presetPath = Join-Path $PSScriptRoot '..\presets\AADSignInEventsBeta_ai_offhours_geo.kql'
+$presetPath = Join-Path $PSScriptRoot '..\presets\EntraIdSignInEvents_ai_offhours_geo.kql'
 $presetPath = (Resolve-Path $presetPath).Path
 $presetRaw  = Get-Content -LiteralPath $presetPath -Raw
 

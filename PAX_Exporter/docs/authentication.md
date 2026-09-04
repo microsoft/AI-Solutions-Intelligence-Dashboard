@@ -1,6 +1,6 @@
 # Authentication
 
-The exporter talks to the Microsoft Graph endpoint `security/runHuntingQuery`, which requires the permission **`ThreatHunting.Read.All`**. You prove who you are in one of two ways. Pick the one that fits.
+The Defender portion of the exporter calls the Microsoft Graph endpoint `security/runHuntingQuery`, which requires **`ThreatHunting.Read.All`**. A full 13-file export also requires **`User.Read.All`**, **`LicenseAssignment.Read.All`**, and **`AuditLog.Read.All`**, plus an interactive Exchange Online/Purview session for Copilot audit data. You prove your Graph identity in one of two ways. Pick the one that fits.
 
 | Path | Best when | You supply |
 | --- | --- | --- |
@@ -21,12 +21,16 @@ An access token is a short-lived string that says "Graph, let me in." It's the f
 - From the Azure CLI, or
 - From any existing tool in your environment that already mints Graph tokens.
 
-Whatever the identity behind the token is, it must hold **`ThreatHunting.Read.All`**.
+For the full 13-file export, the identity behind the token must hold all four Graph permissions listed above. It also needs an interactive Exchange Online/Purview session for Copilot audit data:
+
+```powershell
+Connect-ExchangeOnline
+```
 
 **Use it (single-line, paste directly into PowerShell):**
 
 ```powershell
-.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>'
+.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -AccessToken '<YOUR_ACCESS_TOKEN>' -IncludeSectionA
 ```
 
 Replace `2026-01-01` / `2026-07-01` with your date window and `C:\AI_Usage_Data` with your data folder. Replace `<YOUR_ACCESS_TOKEN>` with the token you copied.
@@ -43,14 +47,20 @@ An app registration is a reusable identity for unattended runs. Set it up once, 
 <summary><strong>One-time setup (click to expand)</strong></summary>
 
 1. **Register an app** in the Microsoft Entra admin center → *App registrations* → *New registration*. Give it a name; leave redirect URI blank.
-2. **Add the permission:** in the app's *API permissions* → *Add a permission* → *Microsoft Graph* → **Application permissions** → search **`ThreatHunting.Read.All`** → add it.
-3. **Grant admin consent** for `ThreatHunting.Read.All` (a tenant admin must click *Grant admin consent*). The status must show a green check.
+2. **Add the permissions:** in the app's *API permissions* → *Add a permission* → *Microsoft Graph* → **Application permissions** → add `ThreatHunting.Read.All`, `User.Read.All`, `LicenseAssignment.Read.All`, and `AuditLog.Read.All`.
+3. **Grant admin consent** for all four permissions (a tenant admin must click *Grant admin consent*). Every status must show a green check.
 4. **Create a client secret:** *Certificates & secrets* → *New client secret* → copy the **Value** immediately (you can't see it again).
 5. **Note three values:** the **Directory (tenant) ID**, the **Application (client) ID**, and the **secret value**.
 
 </details>
 
-**Use it — two commands, paste one at a time:**
+**Use it — establish the Purview session, then run the two commands below:**
+
+```powershell
+Connect-ExchangeOnline
+```
+
+The interactive session is separate from the Graph app credentials and is required by `Search-UnifiedAuditLog`.
 
 **Command 1** — prompts you to type your secret (nothing appears on screen as you type, that's normal):
 ```powershell
@@ -59,13 +69,13 @@ $secret = Read-Host -AsSecureString 'Client secret'
 
 **Command 2** — runs the full export (replace the four `<PLACEHOLDERS>` with your real values):
 ```powershell
-.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
+.\Invoke-AISolutionsExport.ps1 -StartDate '2026-01-01' -EndDate '2026-07-01' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret -IncludeSectionA
 ```
 
 | Placeholder | Where to find it |
 |---|---|
 | `2026-01-01` / `2026-07-01` | Your reporting date window (change these dates) |
-| `C:\AI_Usage_Data` | The folder where you want the 12 CSV files saved |
+| `C:\AI_Usage_Data` | The folder where you want the 13 CSV files saved |
 | `<TENANT_ID>` | Entra admin center → your app registration → **Directory (tenant) ID** |
 | `<CLIENT_ID>` | Entra admin center → your app registration → **Application (client) ID** |
 | `$secret` | Already set by Command 1 — do not replace this |
@@ -90,5 +100,5 @@ $secret = Read-Host -AsSecureString 'Client secret'
 
 - Store the client secret in a vault (e.g. Azure Key Vault), not in scripts.
 - Rotate secrets regularly and delete unused app registrations.
-- Grant **only** `ThreatHunting.Read.All` — nothing broader.
+- Grant only the four required Graph permissions listed above.
 - Never commit tokens, secrets, or exported CSVs. The bundled [.gitignore](../.gitignore) helps.

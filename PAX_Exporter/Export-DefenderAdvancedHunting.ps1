@@ -58,6 +58,11 @@
 .PARAMETER OutputPath
     Path to the CSV file that receives the merged result set.
 
+.PARAMETER OutputColumns
+    Optional ordered list of expected output columns. When supplied, non-empty
+    results are validated and reordered to this schema, and zero-row exports
+    receive a header-only CSV instead of a blank file.
+
 .PARAMETER InitialPartitionHours
     Initial partition size, in hours, used to build the first work queue.
     Defaults to 12.
@@ -187,6 +192,8 @@ param(
 
     [Parameter(Mandatory)]
     [string]$OutputPath,
+
+    [string[]]$OutputColumns,
 
     [double]$InitialPartitionHours = 12,
 
@@ -596,6 +603,21 @@ if ($DedupeKey -and $DedupeKey.Count -gt 0) {
     Write-Progress-Log "Dedupe by [$($DedupeKey -join ', ')]: $before -> $($finalRows.Count) rows" ([ConsoleColor]::Cyan)
 }
 
+if ($OutputColumns -and $OutputColumns.Count -gt 0) {
+    $invalidColumns = @($OutputColumns | Where-Object { [string]::IsNullOrWhiteSpace($_) })
+    if ($invalidColumns.Count -gt 0) {
+        throw 'OutputColumns cannot contain blank names.'
+    }
+    if (@($finalRows).Count -gt 0) {
+        $availableColumns = @($finalRows[0].PSObject.Properties.Name)
+        $missingColumns = @($OutputColumns | Where-Object { $_ -notin $availableColumns })
+        if ($missingColumns.Count -gt 0) {
+            throw "Query result is missing expected output column(s): $($missingColumns -join ', ')."
+        }
+        $finalRows = @($finalRows | Select-Object -Property $OutputColumns)
+    }
+}
+
 $outDir = Split-Path -Parent $OutputPath
 if ($outDir -and -not (Test-Path $outDir)) {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
@@ -605,8 +627,21 @@ if (@($finalRows).Count -gt 0) {
     $finalRows | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
 }
 else {
-    # Still create an (empty) file so downstream steps have a deterministic artifact.
-    Set-Content -Path $OutputPath -Value '' -Encoding UTF8
+    $header = if ($OutputColumns -and $OutputColumns.Count -gt 0) {
+        $headerObject = [ordered]@{}
+        foreach ($column in $OutputColumns) {
+            $headerObject[[string]$column] = $null
+        }
+        [string](
+            [PSCustomObject]$headerObject |
+                ConvertTo-Csv -NoTypeInformation |
+                Select-Object -First 1
+        )
+    }
+    else {
+        ''
+    }
+    [System.IO.File]::WriteAllText($OutputPath, $header + "`n")
 }
 
 $summary = [PSCustomObject]@{

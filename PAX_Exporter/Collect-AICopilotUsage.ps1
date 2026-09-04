@@ -1,12 +1,11 @@
 <#
 .SYNOPSIS
-    Collects the Section-A A2 artifact ai_copilot_usage_graph.csv for the AI
-    Solutions dashboard. This is a live Microsoft Purview Audit pull of
-    CopilotInteraction events, pivoted per user x month by workload.
+    Collects the Section-A A2 Copilot usage artifacts for the AI Solutions
+    dashboard from Microsoft Purview Audit CopilotInteraction events.
 
 .DESCRIPTION
-    The AI Solutions dashboard (pbit) imports twelve CSVs. This collector
-    delivers the last remaining Section-A artifact, A2:
+    The AI Solutions dashboard (pbit) imports thirteen CSVs. This collector
+    delivers the two Section-A A2 artifacts:
 
         A2 -- ai_copilot_usage_graph.csv (Power Query table AI_CopilotUsage):
             A Purview Audit search (Search-UnifiedAuditLog) for
@@ -15,6 +14,12 @@
             with per-surface prompt counts (Teams/Word/Excel/Outlook/PowerPoint/
             Chat), a Total, an ActiveDays distinct-date count, and a
             LastActivityDate.
+
+        A2 normalized -- ai_copilot_surface_usage.csv (Power Query table
+            AI_CopilotSurfaceUsage): one row per user x month x observed
+            surface x source workload x source app host. This preserves every
+            nonblank Purview surface dynamically, including future workloads,
+            without requiring a new fixed CSV column.
 
     Why a SEPARATE script (not the Graph collector): the authoritative source
     for A2 is Microsoft Purview Audit, whose real path requires the
@@ -41,7 +46,8 @@
     connection.
 
 .PARAMETER OutputDirectory
-    Directory that receives ai_copilot_usage_graph.csv. Created if missing.
+    Directory that receives ai_copilot_usage_graph.csv and
+    ai_copilot_surface_usage.csv. Created if missing.
 
 .PARAMETER StartDate
     Lower bound of the audit search window. When unbound, defaults to
@@ -54,6 +60,16 @@
 .PARAMETER PageSize
     Search-UnifiedAuditLog ResultSize / page size for the ReturnLargeSet
     session. Defaults to 5000.
+
+.PARAMETER MaxRecordsPerWindow
+    ReturnLargeSet can return at most 50,000 records per session. A window that
+    reaches this threshold is split in half and retried so truncation is never
+    silently accepted. Defaults to 50,000.
+
+.PARAMETER MinWindowMinutes
+    Smallest audit window permitted during saturation splitting. If a window at
+    this floor still reaches MaxRecordsPerWindow, the collector throws rather
+    than writing an incomplete result. Defaults to 1 minute.
 
 .PARAMETER SearchExecutor
     INJECTION SEAM FOR TESTING. A scriptblock that receives a single argument: a
@@ -70,7 +86,7 @@
 
 .EXAMPLE
     # Credential-free test using an injected mock search executor.
-    $mock = { param($ctx) if ($ctx.Page -eq 0) { ,@([pscustomobject]@{ AuditData = '{"UserId":"a@x","CreationDate":"2026-05-04T10:00:00Z","Workload":"Word","CopilotEventData":{"Prompts":[1,2,3]}}' }) } else { @() } }
+    $mock = { param($ctx) if ($ctx.Page -eq 0) { ,@([pscustomobject]@{ AuditData = '{"UserId":"a@x","CreationTime":"2026-05-04T10:00:00Z","Workload":"Word","CopilotEventData":{"Prompts":[1,2,3]}}' }) } else { @() } }
     .\Collect-AICopilotUsage.ps1 -SearchExecutor $mock -OutputDirectory $tempDir
 
 .NOTES
@@ -93,6 +109,10 @@ param(
 
     [int]$PageSize = 5000,
 
+    [int]$MaxRecordsPerWindow = 50000,
+
+    [double]$MinWindowMinutes = 1,
+
     [scriptblock]$SearchExecutor
 )
 
@@ -100,9 +120,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # ----------------------------------------------------------------------------
-# Constant: byte-exact 11-column header (do not rename / reorder).
+# Constants: byte-exact headers (do not rename / reorder).
 # ----------------------------------------------------------------------------
 $usageHeader = 'UserPrincipalName,YearMonth,TeamsPrompts,WordPrompts,ExcelPrompts,OutlookPrompts,PowerPointPrompts,ChatPrompts,TotalPrompts,ActiveDays,LastActivityDate'
+$surfaceHeader = 'UserPrincipalName,YearMonth,Surface,SourceWorkload,SourceAppHost,PromptCount,ActiveDays,LastActivityDate'
 
 # ----------------------------------------------------------------------------
 # Helpers (StrictMode-safe; copied verbatim from the Graph collector's style).
@@ -132,6 +153,28 @@ function ConvertTo-CsvField {
     return [string]$Value
 }
 
+function ConvertTo-CopilotSurface {
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return 'Unknown' }
+    $trimmed = $Value.Trim()
+    $surface = switch ($trimmed) {
+        'MicrosoftTeams' { 'Teams' }
+        'Teams'          { 'Teams' }
+        'Word'           { 'Word' }
+        'Excel'          { 'Excel' }
+        'Outlook'        { 'Outlook' }
+        'PowerPoint'     { 'PowerPoint' }
+        'BizChat'        { 'Chat' }
+        'Bing'           { 'Chat' }
+        'Office'         { 'Chat' }
+        'M365App'        { 'Chat' }
+        'M365Chat'       { 'Chat' }
+        'Microsoft365'   { 'Chat' }
+        default          { $trimmed }
+    }
+    return $surface
+}
+
 # ----------------------------------------------------------------------------
 # Resolve default date window at use-site (only when unbound).
 # ----------------------------------------------------------------------------
@@ -141,6 +184,18 @@ if (-not $PSBoundParameters.ContainsKey('StartDate')) {
 if (-not $PSBoundParameters.ContainsKey('EndDate')) {
     $EndDate = (Get-Date)
 }
+if ($EndDate -le $StartDate) {
+    throw 'EndDate must be later than StartDate.'
+}
+if ($PageSize -lt 1 -or $PageSize -gt 5000) {
+    throw 'PageSize must be between 1 and 5000.'
+}
+if ($MaxRecordsPerWindow -lt $PageSize) {
+    throw 'MaxRecordsPerWindow must be greater than or equal to PageSize.'
+}
+if ($MinWindowMinutes -le 0) {
+    throw 'MinWindowMinutes must be greater than zero.'
+}
 
 # ----------------------------------------------------------------------------
 # Resolve output directory.
@@ -149,6 +204,7 @@ if (-not (Test-Path $OutputDirectory)) {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 }
 $usagePath = Join-Path $OutputDirectory 'ai_copilot_usage_graph.csv'
+$surfacePath = Join-Path $OutputDirectory 'ai_copilot_surface_usage.csv'
 
 # ----------------------------------------------------------------------------
 # Auth / seam resolution. The mock seam bypasses Exchange Online entirely; the
@@ -163,36 +219,63 @@ if (-not $useMock) {
 }
 
 # ----------------------------------------------------------------------------
-# Paginated Purview audit search. The mock and real path BOTH return a batch of
-# audit records for the requested page; the loop terminates when a page returns
-# fewer than PageSize records (or none).
+# Paginated Purview audit search with bounded time-window subdivision. A
+# ReturnLargeSet session stops at 50,000 records; any saturated window is split
+# and retried. Each accepted record retains its half-open window so boundary
+# records can be filtered deterministically during parsing.
 # ----------------------------------------------------------------------------
-$sessionId = [guid]::NewGuid().ToString()
-$page = 0
+$windowQueue = [System.Collections.Generic.Queue[object]]::new()
+$windowQueue.Enqueue([pscustomobject]@{ Start = $StartDate; End = $EndDate })
 $all  = [System.Collections.Generic.List[object]]::new()
-do {
-    $ctx = [pscustomobject]@{
-        StartDate      = $StartDate
-        EndDate        = $EndDate
-        SessionId      = $sessionId
-        SessionCommand = 'ReturnLargeSet'
-        ResultSize     = $PageSize
-        Page           = $page
+while ($windowQueue.Count -gt 0) {
+    $window = $windowQueue.Dequeue()
+    $sessionId = [guid]::NewGuid().ToString()
+    $page = 0
+    $windowRecords = [System.Collections.Generic.List[object]]::new()
+    do {
+        $ctx = [pscustomobject]@{
+            StartDate      = $window.Start
+            EndDate        = $window.End
+            SessionId      = $sessionId
+            SessionCommand = 'ReturnLargeSet'
+            ResultSize     = $PageSize
+            Page           = $page
+        }
+        if ($useMock) {
+            $batch = & $SearchExecutor $ctx
+        }
+        else {
+            $batch = Search-UnifiedAuditLog -StartDate $window.Start -EndDate $window.End `
+                       -Operations 'CopilotInteraction' -ResultSize $PageSize `
+                       -SessionId $sessionId -SessionCommand ReturnLargeSet
+        }
+        $count = 0
+        if ($null -ne $batch) {
+            foreach ($r in @($batch)) { [void]$windowRecords.Add($r); $count++ }
+        }
+        $page++
+    } while ($count -gt 0 -and $windowRecords.Count -lt $MaxRecordsPerWindow)
+
+    if ($windowRecords.Count -ge $MaxRecordsPerWindow) {
+        $windowMinutes = ($window.End - $window.Start).TotalMinutes
+        if ($windowMinutes -le $MinWindowMinutes) {
+            throw "Purview audit window [$($window.Start.ToString('o')), $($window.End.ToString('o'))) reached $MaxRecordsPerWindow records at the $MinWindowMinutes-minute floor. Refine the source query or lower the collection range."
+        }
+        $midpoint = $window.Start.AddTicks([long](($window.End.Ticks - $window.Start.Ticks) / 2))
+        $windowQueue.Enqueue([pscustomobject]@{ Start = $window.Start; End = $midpoint })
+        $windowQueue.Enqueue([pscustomobject]@{ Start = $midpoint; End = $window.End })
+        Write-Warning "Purview audit window reached $MaxRecordsPerWindow records; retrying as two smaller windows."
+        continue
     }
-    if ($useMock) {
-        $batch = & $SearchExecutor $ctx
+
+    foreach ($r in $windowRecords) {
+        [void]$all.Add([pscustomobject]@{
+            Record      = $r
+            WindowStart = $window.Start
+            WindowEnd   = $window.End
+        })
     }
-    else {
-        $batch = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate `
-                   -Operations 'CopilotInteraction' -ResultSize $PageSize `
-                   -SessionId $sessionId -SessionCommand ReturnLargeSet
-    }
-    $count = 0
-    if ($null -ne $batch) {
-        foreach ($r in @($batch)) { [void]$all.Add($r); $count++ }
-    }
-    $page++
-} while ($count -eq $PageSize -and $count -gt 0)
+}
 
 Write-Progress-Log ("  A2 CopilotInteraction events retrieved: {0}" -f $all.Count) ([ConsoleColor]::Cyan)
 
@@ -200,7 +283,8 @@ Write-Progress-Log ("  A2 CopilotInteraction events retrieved: {0}" -f $all.Coun
 # Parse each audit record (StrictMode-safe) into an intermediate usage row.
 # ----------------------------------------------------------------------------
 $parsed = [System.Collections.Generic.List[object]]::new()
-foreach ($rec in $all) {
+foreach ($item in $all) {
+    $rec = $item.Record
     $audit = Get-PropValue $rec 'AuditData'
     if ($null -eq $audit) { continue }
     $data = $audit | ConvertFrom-Json
@@ -209,54 +293,59 @@ foreach ($rec in $all) {
     if ($null -eq $userId -or [string]$userId -eq '') { continue }
     $upn = ([string]$userId).ToLower()
 
-    $creationRaw = Get-PropValue $data 'CreationDate'
+    $creationRaw = Get-PropValue $data 'CreationTime'
+    if ($null -eq $creationRaw -or [string]$creationRaw -eq '') {
+        $creationRaw = Get-PropValue $rec 'CreationDate'
+    }
     if ($null -eq $creationRaw -or [string]$creationRaw -eq '') { continue }
     $creation = [datetime]::Parse([string]$creationRaw, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind)
+    if ($creation -lt $item.WindowStart -or $creation -ge $item.WindowEnd) { continue }
     $yearMonth = $creation.ToString('yyyy-MM')
     $date = $creation.ToString('yyyy-MM-dd')
 
-    $rawWorkload = Get-PropValue $data 'Workload'
-    $workload = switch ([string]$rawWorkload) {
-        'MicrosoftTeams' { 'Teams' }
-        'Word'           { 'Word' }
-        'Excel'          { 'Excel' }
-        'Outlook'        { 'Outlook' }
-        'PowerPoint'     { 'PowerPoint' }
-        'Bing'           { 'Chat' }
-        'M365Chat'       { 'Chat' }
-        'Microsoft365'   { 'Chat' }
-        default          { [string]$rawWorkload }
-    }
-
+    $rawWorkload = ConvertTo-CsvField (Get-PropValue $data 'Workload')
     $ced = Get-PropValue $data 'CopilotEventData'
+    $rawAppHost = ConvertTo-CsvField (Get-PropValue $ced 'AppHost')
+    if ([string]::IsNullOrWhiteSpace($rawAppHost)) {
+        $rawAppHost = ConvertTo-CsvField (Get-PropValue $data 'AppHost')
+    }
+    $surfaceSource = if ([string]::IsNullOrWhiteSpace($rawAppHost)) {
+        $rawWorkload
+    }
+    else {
+        $rawAppHost
+    }
+    $surface = ConvertTo-CopilotSurface $surfaceSource
+
     $p = Get-PropValue $ced 'Prompts'
     $prompts = if ($p) { @($p).Count } else { 1 }
 
     $parsed.Add([pscustomobject]@{
-        UPN       = $upn
-        YearMonth = $yearMonth
-        Date      = $date
-        Workload  = $workload
-        Prompts   = $prompts
+        UPN            = $upn
+        YearMonth      = $yearMonth
+        Date           = $date
+        Surface        = $surface
+        SourceWorkload = $rawWorkload
+        SourceAppHost  = $rawAppHost
+        Prompts        = $prompts
     })
 }
 
 # ----------------------------------------------------------------------------
-# Pivot: one row per UPN x YearMonth with per-surface prompt sums. Unknown /
-# passthrough workloads are excluded from every surface sum AND from Total
-# (matches the reference A2 pivot).
+# Legacy compatibility pivot: one row per UPN x YearMonth with the original six
+# fixed surface columns. TotalPrompts includes every observed surface.
 # ----------------------------------------------------------------------------
 $usageRows = [System.Collections.Generic.List[object]]::new()
 $groups = $parsed | Group-Object -Property UPN, YearMonth
 foreach ($g in $groups) {
     $first = $g.Group[0]
 
-    $teams = ($g.Group | Where-Object { $_.Workload -eq 'Teams' }      | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
-    $word  = ($g.Group | Where-Object { $_.Workload -eq 'Word' }       | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
-    $excel = ($g.Group | Where-Object { $_.Workload -eq 'Excel' }      | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
-    $outl  = ($g.Group | Where-Object { $_.Workload -eq 'Outlook' }    | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
-    $ppt   = ($g.Group | Where-Object { $_.Workload -eq 'PowerPoint' } | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
-    $chat  = ($g.Group | Where-Object { $_.Workload -eq 'Chat' }       | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $teams = ($g.Group | Where-Object { $_.Surface -eq 'Teams' }      | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $word  = ($g.Group | Where-Object { $_.Surface -eq 'Word' }       | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $excel = ($g.Group | Where-Object { $_.Surface -eq 'Excel' }      | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $outl  = ($g.Group | Where-Object { $_.Surface -eq 'Outlook' }    | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $ppt   = ($g.Group | Where-Object { $_.Surface -eq 'PowerPoint' } | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $chat  = ($g.Group | Where-Object { $_.Surface -eq 'Chat' }       | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
 
     if ($null -eq $teams) { $teams = 0 }
     if ($null -eq $word)  { $word  = 0 }
@@ -267,7 +356,8 @@ foreach ($g in $groups) {
 
     $activeDays = @($g.Group | ForEach-Object { $_.Date } | Select-Object -Unique).Count
     $lastActivity = ($g.Group | ForEach-Object { $_.Date } | Measure-Object -Maximum).Maximum
-    $total = [int]$teams + [int]$word + [int]$excel + [int]$outl + [int]$ppt + [int]$chat
+    $total = ($g.Group | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    if ($null -eq $total) { $total = 0 }
 
     $usageRows.Add([pscustomobject]@{
         UserPrincipalName = $first.UPN
@@ -279,6 +369,31 @@ foreach ($g in $groups) {
         PowerPointPrompts = [int]$ppt
         ChatPrompts       = [int]$chat
         TotalPrompts      = [int]$total
+        ActiveDays        = [int]$activeDays
+        LastActivityDate  = $lastActivity
+    })
+}
+
+# ----------------------------------------------------------------------------
+# Dynamic surface fact: retain each observed Purview surface and its raw source
+# fields. Grouping by source fields preserves provenance while the report can
+# aggregate PromptCount by the friendly Surface value.
+# ----------------------------------------------------------------------------
+$surfaceRows = [System.Collections.Generic.List[object]]::new()
+$surfaceGroups = $parsed | Group-Object -Property UPN, YearMonth, Surface, SourceWorkload, SourceAppHost
+foreach ($g in $surfaceGroups) {
+    $first = $g.Group[0]
+    $promptCount = ($g.Group | ForEach-Object { $_.Prompts } | Measure-Object -Sum).Sum
+    $activeDays = @($g.Group | ForEach-Object { $_.Date } | Select-Object -Unique).Count
+    $lastActivity = ($g.Group | ForEach-Object { $_.Date } | Measure-Object -Maximum).Maximum
+
+    $surfaceRows.Add([pscustomobject]@{
+        UserPrincipalName = $first.UPN
+        YearMonth         = $first.YearMonth
+        Surface           = $first.Surface
+        SourceWorkload    = $first.SourceWorkload
+        SourceAppHost     = $first.SourceAppHost
+        PromptCount       = [int]$promptCount
         ActiveDays        = [int]$activeDays
         LastActivityDate  = $lastActivity
     })
@@ -302,8 +417,21 @@ if ($usageRows.Count -gt 0) {
 else {
     Set-Content -Path $usagePath -Value $usageHeader -Encoding UTF8
 }
+
+if ($surfaceRows.Count -gt 0) {
+    $surfaceRows | Select-Object `
+        UserPrincipalName, YearMonth, Surface, SourceWorkload, SourceAppHost, `
+        PromptCount, ActiveDays, LastActivityDate |
+        Export-Csv -Path $surfacePath -NoTypeInformation -Encoding UTF8 -UseQuotes AsNeeded
+}
+else {
+    Set-Content -Path $surfacePath -Value $surfaceHeader -Encoding UTF8
+}
+
 $usageRowCount = $usageRows.Count
+$surfaceRowCount = $surfaceRows.Count
 Write-Progress-Log ("  A2 ai_copilot_usage_graph.csv: {0} user-month row(s)" -f $usageRowCount) ([ConsoleColor]::Green)
+Write-Progress-Log ("  A2 ai_copilot_surface_usage.csv: {0} surface row(s)" -f $surfaceRowCount) ([ConsoleColor]::Green)
 
 # ----------------------------------------------------------------------------
 # Summary (Write-Host does not pollute the pipeline) + return object.
@@ -312,10 +440,12 @@ Write-Host ""
 Write-Host "==== AI Copilot usage (Purview) collection summary ====" -ForegroundColor White
 Write-Host ("OutputDirectory : {0}" -f $OutputDirectory)
 Write-Host ("CopilotUsage    : {0} row(s)" -f $usageRowCount)
+Write-Host ("SurfaceUsage    : {0} row(s)" -f $surfaceRowCount)
 Write-Host ("EventsParsed    : {0}" -f $parsed.Count)
 Write-Host ""
 
 return [PSCustomObject]@{
     OutputDirectory = $OutputDirectory
     CopilotUsage    = [pscustomobject]@{ Path = $usagePath; RowCount = $usageRowCount; EventsParsed = $parsed.Count }
+    SurfaceUsage    = [pscustomobject]@{ Path = $surfacePath; RowCount = $surfaceRowCount; EventsParsed = $parsed.Count }
 }

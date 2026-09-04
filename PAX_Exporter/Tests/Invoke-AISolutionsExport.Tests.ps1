@@ -85,10 +85,34 @@ function New-TempOutDir {
 function Get-PresetClass {
     param([string]$Kql)
     if ($Kql.Contains('CloudAppEvents')) { return 'activity_sessions' }
-    if ($Kql.Contains('AADSignInEventsBeta')) { return 'offhours_geo' }
+    if ($Kql.Contains('EntraIdSignInEvents')) { return 'offhours_geo' }
     if ($Kql.Contains('DeviceFileEvents')) { return 'file_proximity' }
     if ($Kql.Contains('summarize EventCount = count() by AISite')) { return 'client_channel' }
     return 'unknown'
+}
+
+function New-MockAhRows {
+    param([string]$Kql, [int]$Count = 2)
+    $class = Get-PresetClass -Kql $Kql
+    for ($i = 1; $i -le $Count; $i++) {
+        switch ($class) {
+            'activity_sessions' {
+                [PSCustomObject]@{ UPN="u$i@x"; AISolution='ChatGPT'; YearMonth='2026-05'; Sessions=1; ActiveDays=1; EstimatedPrompts=1; DistinctDevices=1; Category='General AI'; RiskTier='Conditional' }
+            }
+            'offhours_geo' {
+                [PSCustomObject]@{ UPN="u$i@x"; YearMonth='2026-05'; TotalSessions=1; OffHoursSessions=0; OffHoursPct=0; DistinctCountries=1; AnomalousCountryCount=0; AnomalousCountries='' }
+            }
+            'file_proximity' {
+                [PSCustomObject]@{ Timestamp="2026-05-0${i}T00:00:00Z"; UPN="u$i@x"; AISolution='ChatGPT'; YearMonth='2026-05'; FileName="f$i.docx"; FolderCategory='Documents'; FolderPath='C:\Documents'; SecondsToAI=1; NameMatchesSensitivePattern=0; FolderMatchesSensitive=0 }
+            }
+            'client_channel' {
+                [PSCustomObject]@{ AISite="site$i.example"; Channel='Browser'; YearMonth='2026-05'; EventCount=1 }
+            }
+            default {
+                throw 'Unknown preset in test mock.'
+            }
+        }
+    }
 }
 
 # ===========================================================================
@@ -104,10 +128,7 @@ try {
     $c1Mock = {
         param($ctx)
         $capturedC1.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql; BucketColumn = [string]$ctx.BucketColumn })
-        return @(
-            [PSCustomObject]@{ Col1 = 'a'; Col2 = 1 },
-            [PSCustomObject]@{ Col1 = 'b'; Col2 = 2 }
-        )
+        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
     }.GetNewClosure()
 
     $outC1 = New-TempOutDir 'c1'
@@ -158,10 +179,7 @@ try {
     $c2Mock = {
         param($ctx)
         $capturedC2.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql })
-        return @(
-            [PSCustomObject]@{ Col1 = 'a'; Col2 = 1 },
-            [PSCustomObject]@{ Col1 = 'b'; Col2 = 2 }
-        )
+        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
     }.GetNewClosure()
 
     $outC2 = New-TempOutDir 'c2'
@@ -255,7 +273,7 @@ try {
     $c4Mock = {
         param($ctx)
         $capturedC4.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql; BucketColumn = [string]$ctx.BucketColumn })
-        return @([PSCustomObject]@{ Col1 = 'a'; Col2 = 1 })
+        return @(New-MockAhRows -Kql ([string]$ctx.Kql) -Count 1)
     }.GetNewClosure()
 
     & $scriptPath `
@@ -301,7 +319,7 @@ catch {
 }
 
 # ===========================================================================
-# Section-A shared fixtures (cases c6-c9). The five Section-A artifacts, plus
+# Section-A shared fixtures (cases c6-c9). The six Section-A artifacts, plus
 # the three injectable mock seams used to drive the -IncludeSectionA path with
 # NO tenant / token / network access:
 #   * $ahMock       -> existing Defender-AH -QueryExecutor seam (as in c1).
@@ -316,15 +334,13 @@ $sectionAArtifacts = @(
     'ai_solutions_catalog.csv',
     'ai_oauth_consents.csv',
     'ai_sso_signins.csv',
-    'ai_copilot_usage_graph.csv'
+    'ai_copilot_usage_graph.csv',
+    'ai_copilot_surface_usage.csv'
 )
 
 $ahMock = {
     param($ctx)
-    return @(
-        [PSCustomObject]@{ Col1 = 'a'; Col2 = 1 },
-        [PSCustomObject]@{ Col1 = 'b'; Col2 = 2 }
-    )
+    return @(New-MockAhRows -Kql ([string]$ctx.Kql))
 }
 
 $graphMock = {
@@ -377,7 +393,7 @@ $graphMock = {
 $purviewMock = {
     param($ctx)
     if ($ctx.Page -eq 0) {
-        $rec = [pscustomobject]@{ UserId = 'a@x'; CreationDate = '2026-05-04T10:00:00Z'; Workload = 'Word' }
+        $rec = [pscustomobject]@{ UserId = 'a@x'; CreationTime = '2026-05-04T10:00:00Z'; Workload = 'Word' }
         $json = $rec | ConvertTo-Json -Compress -Depth 5
         return @([pscustomobject]@{ AuditData = $json })
     }
@@ -385,11 +401,11 @@ $purviewMock = {
 }
 
 # ===========================================================================
-# CASE c6. -IncludeSectionA with all three seams -> all TWELVE files exist
-#   (4 real + 3 stub + 5 Section-A).
+# CASE c6. -IncludeSectionA with all three seams -> all THIRTEEN files exist
+#   (4 real + 3 stub + 6 Section-A).
 # ===========================================================================
 Write-Host ""
-Write-Host "---- Case c6: -IncludeSectionA produces all 12 dashboard files ----" -ForegroundColor Cyan
+Write-Host "---- Case c6: -IncludeSectionA produces all 13 dashboard files ----" -ForegroundColor Cyan
 try {
     $outC6 = New-TempOutDir 'c6'
     & $scriptPath `
@@ -410,17 +426,17 @@ try {
     foreach ($f in $expectedC6) {
         if (-not (Test-Path (Join-Path $outC6 $f))) { $missingC6 += $f }
     }
-    $passC6 = ($missingC6.Count -eq 0) -and ($expectedC6.Count -eq 12)
+    $passC6 = ($missingC6.Count -eq 0) -and ($expectedC6.Count -eq 13)
     $missingLabelC6 = if ($missingC6.Count -gt 0) { ($missingC6 -join ',') } else { 'none' }
-    Add-CaseResult -Name 'c6. -IncludeSectionA emits all 12 dashboard CSVs (4 real + 3 stub + 5 Section-A)' -Pass $passC6 `
+    Add-CaseResult -Name 'c6. -IncludeSectionA emits all 13 dashboard CSVs (4 real + 3 stub + 6 Section-A)' -Pass $passC6 `
         -Detail ("expected={0}; missing={1}" -f $expectedC6.Count, $missingLabelC6)
 }
 catch {
-    Add-CaseResult -Name 'c6. -IncludeSectionA emits all 12 dashboard CSVs (4 real + 3 stub + 5 Section-A)' -Pass $false -Detail "threw: $($_.Exception.Message)"
+    Add-CaseResult -Name 'c6. -IncludeSectionA emits all 13 dashboard CSVs (4 real + 3 stub + 6 Section-A)' -Pass $false -Detail "threw: $($_.Exception.Message)"
 }
 
 # ===========================================================================
-# CASE c7. Backward-compat: WITHOUT -IncludeSectionA, none of the 5 Section-A
+# CASE c7. Backward-compat: WITHOUT -IncludeSectionA, none of the 6 Section-A
 #   files are produced (only the 7 baseline files present).
 # ===========================================================================
 Write-Host ""

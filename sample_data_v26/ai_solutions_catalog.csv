@@ -1,0 +1,9 @@
+AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup
+Microsoft 365 Copilot,Productivity,Microsoft,Sanctioned,Internal Only,Microsoft Copilot
+GitHub Copilot,Development,Microsoft,Sanctioned,Code Context,Microsoft Copilot
+ChatGPT,General AI,OpenAI,Conditional,Public Cloud,Licensed Third-Party
+Claude,General AI,Anthropic,Unsanctioned,Public Cloud,Shadow AI
+Gemini,General AI,Google,Unsanctioned,Public Cloud,Shadow AI
+Perplexity,Search AI,Perplexity,Unsanctioned,Public Cloud,Shadow AI
+DeepSeek,General AI,DeepSeek,Unsanctioned,Public Cloud,Shadow AI
+Midjourney,Image Generation,Midjourney,Unsanctioned,Public Cloud,Shadow AI

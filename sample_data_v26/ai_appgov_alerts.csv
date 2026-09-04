@@ -1,0 +1,51 @@
+Timestamp,YearMonth,UPN,AppName,AlertType,Severity,Description
+2025-11-13T07:38:14Z,2025-11,hana.wong@contoso.com,Claude,Suspicious Sign-in,Medium,Sign-in from anomalous location
+2026-03-25T14:05:51Z,2026-03,priya.rao@contoso.com,Claude,Risky OAuth Grant,Medium,App granted broad mailbox access
+2026-02-20T08:24:02Z,2026-02,vlad.boyd@contoso.com,DeepSeek,Excessive Permissions,Low,App requested high-privilege scopes
+2025-12-05T22:01:06Z,2025-12,jack.tate@contoso.com,DeepSeek,Risky OAuth Grant,Medium,App granted broad mailbox access
+2025-09-06T04:22:15Z,2025-09,kara.yost@contoso.com,Perplexity,Excessive Permissions,High,App requested high-privilege scopes
+2025-11-10T02:48:20Z,2025-11,ueli.zane@contoso.com,DeepSeek,Excessive Permissions,Medium,App requested high-privilege scopes
+2026-01-01T01:49:51Z,2026-01,ella.hart@contoso.com,Perplexity,Suspicious Sign-in,Low,Sign-in from anomalous location
+2026-06-12T23:16:15Z,2026-06,iris.lund@contoso.com,Perplexity,Risky OAuth Grant,High,App granted broad mailbox access
+2026-02-11T17:36:40Z,2026-02,adam.gore@contoso.com,Perplexity,Excessive Permissions,Low,App requested high-privilege scopes
+2025-09-09T10:47:24Z,2025-09,finn.nash@contoso.com,Perplexity,Suspicious Sign-in,Low,Sign-in from anomalous location
+2026-02-09T22:55:36Z,2026-02,ueli.zane@contoso.com,Perplexity,Excessive Permissions,Medium,App requested high-privilege scopes
+2025-09-11T15:48:38Z,2025-09,jade.singh@contoso.com,Midjourney,Data Exfiltration,High,Large outbound file transfer to AI app
+2025-10-15T19:18:36Z,2025-10,gus.mata@contoso.com,Perplexity,Risky OAuth Grant,Medium,App granted broad mailbox access
+2026-01-23T02:26:42Z,2026-01,evan.reed@contoso.com,DeepSeek,Risky OAuth Grant,Medium,App granted broad mailbox access
+2025-12-02T09:43:30Z,2025-12,dora.judd@contoso.com,Claude,Excessive Permissions,Low,App requested high-privilege scopes
+2025-10-05T12:56:39Z,2025-10,adam.gore@contoso.com,ChatGPT,Data Exfiltration,Low,Large outbound file transfer to AI app
+2026-01-25T03:14:10Z,2026-01,will.toney@contoso.com,ChatGPT,Data Exfiltration,High,Large outbound file transfer to AI app
+2026-04-01T14:41:43Z,2026-04,rosa.snow@contoso.com,Claude,Risky OAuth Grant,High,App granted broad mailbox access
+2026-06-16T02:58:40Z,2026-06,ximena.dent@contoso.com,Gemini,Excessive Permissions,Medium,App requested high-privilege scopes
+2026-06-11T08:38:35Z,2026-06,tina.wynn@contoso.com,Midjourney,Risky OAuth Grant,Low,App granted broad mailbox access
+2026-03-25T15:56:04Z,2026-03,quinn.ford@contoso.com,Gemini,Suspicious Sign-in,Low,Sign-in from anomalous location
+2026-04-04T04:10:06Z,2026-04,hana.wong@contoso.com,ChatGPT,Excessive Permissions,Medium,App requested high-privilege scopes
+2025-09-19T22:26:21Z,2025-09,vlad.boyd@contoso.com,Claude,Risky OAuth Grant,High,App granted broad mailbox access
+2025-12-19T11:20:21Z,2025-12,uma.roy@contoso.com,Gemini,Excessive Permissions,High,App requested high-privilege scopes
+2026-05-17T15:21:43Z,2026-05,caleb.ives@contoso.com,ChatGPT,Data Exfiltration,Low,Large outbound file transfer to AI app
+2026-03-26T10:51:00Z,2026-03,pete.rios@contoso.com,Claude,Suspicious Sign-in,Low,Sign-in from anomalous location
+2026-03-01T12:18:27Z,2026-03,wade.crum@contoso.com,Midjourney,Risky OAuth Grant,High,App granted broad mailbox access
+2026-03-21T14:18:55Z,2026-03,evan.reed@contoso.com,ChatGPT,Risky OAuth Grant,Medium,App granted broad mailbox access
+2026-05-10T09:40:32Z,2026-05,uma.roy@contoso.com,Claude,Suspicious Sign-in,Low,Sign-in from anomalous location
+2025-10-09T15:56:49Z,2025-10,iris.lund@contoso.com,Perplexity,Suspicious Sign-in,Medium,Sign-in from anomalous location
+2026-06-05T23:17:00Z,2026-06,will.toney@contoso.com,Midjourney,Risky OAuth Grant,High,App granted broad mailbox access
+2026-05-24T19:03:06Z,2026-05,will.toney@contoso.com,Claude,Data Exfiltration,Low,Large outbound file transfer to AI app
+2026-04-19T21:05:02Z,2026-04,kyle.brown@contoso.com,DeepSeek,Risky OAuth Grant,Low,App granted broad mailbox access
+2026-01-17T03:39:15Z,2026-01,drew.shaw@contoso.com,Gemini,Risky OAuth Grant,Low,App granted broad mailbox access
+2026-05-08T23:49:06Z,2026-05,olga.pace@contoso.com,Perplexity,Suspicious Sign-in,Low,Sign-in from anomalous location
+2025-10-18T04:50:21Z,2025-10,beth.quinn@contoso.com,Perplexity,Risky OAuth Grant,Medium,App granted broad mailbox access
+2026-04-24T21:05:59Z,2026-04,yara.adler@contoso.com,Midjourney,Data Exfiltration,Medium,Large outbound file transfer to AI app
+2026-02-22T04:03:13Z,2026-02,gus.mata@contoso.com,Claude,Risky OAuth Grant,Medium,App granted broad mailbox access
+2025-09-22T08:01:15Z,2025-09,nora.hale@contoso.com,Claude,Suspicious Sign-in,High,Sign-in from anomalous location
+2025-09-16T22:18:11Z,2025-09,ximena.dent@contoso.com,Gemini,Suspicious Sign-in,High,Sign-in from anomalous location
+2026-03-01T08:05:30Z,2026-03,pete.rios@contoso.com,Claude,Excessive Permissions,High,App requested high-privilege scopes
+2025-12-12T04:50:02Z,2025-12,xena.marsh@contoso.com,Midjourney,Suspicious Sign-in,Medium,Sign-in from anomalous location
+2026-01-02T17:09:11Z,2026-01,vlad.boyd@contoso.com,Claude,Excessive Permissions,Medium,App requested high-privilege scopes
+2025-09-06T22:56:00Z,2025-09,finn.nash@contoso.com,Midjourney,Data Exfiltration,Low,Large outbound file transfer to AI app
+2026-05-20T18:29:15Z,2026-05,vera.bose@contoso.com,Perplexity,Risky OAuth Grant,Medium,App granted broad mailbox access
+2025-11-15T08:43:19Z,2025-11,tom.frey@contoso.com,Claude,Excessive Permissions,Low,App requested high-privilege scopes
+2025-09-13T03:32:42Z,2025-09,liam.beck@contoso.com,DeepSeek,Risky OAuth Grant,Low,App granted broad mailbox access
+2026-01-10T02:04:46Z,2026-01,gwen.webb@contoso.com,ChatGPT,Risky OAuth Grant,Medium,App granted broad mailbox access
+2025-12-08T16:31:02Z,2025-12,zane.voss@contoso.com,Gemini,Suspicious Sign-in,High,Sign-in from anomalous location
+2025-10-08T05:23:33Z,2025-10,dora.judd@contoso.com,Midjourney,Risky OAuth Grant,Medium,App granted broad mailbox access

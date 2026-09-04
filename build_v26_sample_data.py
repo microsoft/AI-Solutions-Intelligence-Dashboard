@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic, stdlib-only synthetic test-data generator.
 
-Writes 12 CSV files whose headers EXACTLY match the columns expected by
-"AI-Solutions-Intelligence-Dashboard V1.pbit" into a `sample_data_v26/` folder
+Writes 13 CSV files whose headers EXACTLY match the columns expected by
+"AI-Solutions-Intelligence-Dashboard V26.pbit" into a `sample_data_v26/` folder
 located next to this script. Output is reproducible via SEED = 20260504.
 """
 
@@ -100,29 +100,32 @@ LICENSED_COPILOT = set(u["upn"] for u in USERS[:40])
 
 CATALOG_ROWS = [
     # AISolution, Category, Vendor, RiskTier, DefaultDataHandling
-    ("Microsoft 365 Copilot", "Managed Copilot", "Microsoft", "Low",
-     "Does not train on data"),
-    ("GitHub Copilot", "Developer AI", "Microsoft", "Low",
-     "Does not train on data"),
-    ("ChatGPT", "Unmanaged AI", "OpenAI", "High",
-     "Trains on data unless opted out"),
-    ("Claude", "Unmanaged AI", "Anthropic", "Medium",
-     "Does not train on data"),
-    ("Google Gemini", "Unmanaged AI", "Google", "Medium",
-     "Trains on data unless opted out"),
-    ("Perplexity", "Unmanaged AI", "Perplexity", "High",
-     "Trains on data"),
-    ("DeepSeek", "Unmanaged AI", "DeepSeek", "High",
-     "Trains on data"),
-    ("Midjourney", "Unmanaged AI", "Midjourney", "Medium",
-     "Trains on data unless opted out"),
+    ("Microsoft 365 Copilot", "Productivity", "Microsoft", "Sanctioned",
+     "Internal Only"),
+    ("GitHub Copilot", "Development", "Microsoft", "Sanctioned",
+     "Code Context"),
+    ("ChatGPT", "General AI", "OpenAI", "Conditional",
+     "Public Cloud"),
+    ("Claude", "General AI", "Anthropic", "Unsanctioned",
+     "Public Cloud"),
+    ("Gemini", "General AI", "Google", "Unsanctioned",
+     "Public Cloud"),
+    ("Perplexity", "Search AI", "Perplexity", "Unsanctioned",
+     "Public Cloud"),
+    ("DeepSeek", "General AI", "DeepSeek", "Unsanctioned",
+     "Public Cloud"),
+    ("Midjourney", "Image Generation", "Midjourney", "Unsanctioned",
+     "Public Cloud"),
 ]
 
 # Lookup: solution -> (Category, RiskTier)
 SOL_META = {r[0]: (r[1], r[3]) for r in CATALOG_ROWS}
 SOLUTIONS = [r[0] for r in CATALOG_ROWS]
-THIRD_PARTY = ["ChatGPT", "Claude", "Google Gemini", "Perplexity",
+THIRD_PARTY = ["ChatGPT", "Claude", "Gemini", "Perplexity",
                "DeepSeek", "Midjourney"]
+CLIENT_CHANNELS = ["Browser", "API", "Desktop"]
+FOLDER_CATEGORIES = ["Desktop", "Downloads", "Documents", "OneDrive",
+                     "SharePoint", "Other"]
 
 # ---------------------------------------------------------------------------
 # YearMonth helpers
@@ -151,8 +154,8 @@ def ym_to_dt(ym, day=None, hour=None):
 def gen_entra():
     header = ["userPrincipalName", "displayName", "department", "jobTitle",
               "city", "country", "companyName", "accountEnabled", "userType",
-              "manager_displayName", "manager_userPrincipalName", "hasLicense",
-              "assignedLicenses", "createdDateTime"]
+              "createdDateTime", "hasLicense", "assignedLicenses",
+              "manager_displayName", "manager_userPrincipalName"]
     rows = []
     guest_idxs = set(random.sample(range(len(USERS)), 4))
     disabled_idxs = set(random.sample(range(len(USERS)), 2))
@@ -167,18 +170,18 @@ def gen_entra():
         else:
             mgr_dn, mgr_upn = mgr["displayName"], mgr["upn"]
         if u["upn"] in LICENSED_COPILOT:
-            lic = "Microsoft 365 E5;Microsoft 365 Copilot"
-            has_lic = "true"
+            lic = "SPE_E5;Microsoft_365_Copilot"
+            has_lic = "TRUE"
         else:
-            lic = random.choice(["Microsoft 365 E5", "Microsoft 365 E3"])
-            has_lic = random.choice(["true", "false"])
+            lic = random.choice(["SPE_E5", "SPE_E3"])
+            has_lic = random.choice(["TRUE", "FALSE"])
         created = base + timedelta(days=random.randint(0, 1200))
         rows.append([
             u["upn"], u["displayName"], u["department"],
             random.choice(JOB_TITLES), CITIES[city_i], COUNTRIES[city_i],
-            "Contoso Ltd", "false" if is_disabled else "true",
-            "Guest" if is_guest else "Member",
-            mgr_dn, mgr_upn, has_lic, lic, iso_dt(created),
+            "Contoso Ltd", "FALSE" if is_disabled else "TRUE",
+            "Guest" if is_guest else "Member", iso_dt(created),
+            has_lic, lic, mgr_dn, mgr_upn,
         ])
     return write_csv("EntraUsers.csv", header, rows)
 
@@ -187,18 +190,18 @@ def gen_entra():
 # 2) ai_solutions_catalog.csv
 # ===========================================================================
 
-def solution_group(category):
-    if category == "Managed Copilot":
+def solution_group(risk_tier, vendor):
+    if vendor == "Microsoft":
         return "Microsoft Copilot"
-    if category == "Developer AI":
-        return "Developer AI"
+    if risk_tier == "Conditional":
+        return "Licensed Third-Party"
     return "Shadow AI"
 
 
 def gen_catalog():
     header = ["AISolution", "Category", "Vendor", "RiskTier",
               "DefaultDataHandling", "SolutionGroup"]
-    rows = [list(r) + [solution_group(r[1])] for r in CATALOG_ROWS]
+    rows = [list(r) + [solution_group(r[3], r[2])] for r in CATALOG_ROWS]
     return write_csv("ai_solutions_catalog.csv", header, rows)
 
 
@@ -232,12 +235,13 @@ def gen_activity():
             nmonths = random.randint(2, 5)
             months = random.sample(YM_WINDOW, min(nmonths, len(YM_WINDOW)))
             for ym in months:
+                sessions = random.randint(1, 400)
                 rows.append([
                     user, sol, ym,
-                    random.randint(1, 400),
-                    random.randint(1, 22),
-                    random.randint(1, 1500),
-                    random.randint(1, 3),
+                    sessions,
+                    random.randint(1, min(22, sessions)),
+                    random.randint(1, sessions),
+                    random.randint(1, min(3, sessions)),
                     cat, risk,
                 ])
     return write_csv("ai_activity_sessions.csv", header, rows)
@@ -285,12 +289,13 @@ def gen_sso():
         upn = random.choice(UPNS)
         app = random.choice(THIRD_PARTY)
         ym = random.choice(YM_WINDOW)
+        sign_in_count = random.randint(1, 200)
         rows.append([
             upn, app, ym,
-            random.randint(1, 200), random.randint(1, 22),
-            random.choice(["true", "false", "false", "false"]),
+            sign_in_count, random.randint(1, min(22, sign_in_count)),
+            random.choice(["TRUE", "FALSE", "FALSE", "FALSE"]),
             random.choice(country_sets),
-            random.choice(["Yes", "Yes", "No"]),  # meaningful share of No
+            random.choice(["TRUE", "TRUE", "FALSE"]),
             iso_dt(ym_to_dt(ym)),
         ])
     return write_csv("ai_sso_signins.csv", header, rows)
@@ -304,7 +309,6 @@ def gen_proximity():
     header = ["Timestamp", "UPN", "AISolution", "YearMonth", "FileName",
               "FolderCategory", "FolderPath", "SecondsToAI",
               "NameMatchesSensitivePattern", "FolderMatchesSensitive"]
-    folders = ["Finance", "HR", "Legal", "Engineering", "General"]
     fnames = ["Q3_Forecast.xlsx", "Salary_Bands.xlsx", "NDA_Draft.docx",
               "Roadmap.pptx", "Notes.docx", "Budget_2026.xlsx",
               "Contract_v2.docx", "Specs.md", "Headcount.xlsx",
@@ -314,7 +318,7 @@ def gen_proximity():
         upn = random.choice(UPNS)
         sol = random.choice(SOLUTIONS)
         ym = random.choice(YM_WINDOW)
-        cat = random.choice(folders)
+        cat = random.choice(FOLDER_CATEGORIES)
         ts = ym_to_dt(ym)
         sensitive = 1 if random.random() < 0.25 else 0
         name_match = sensitive if random.random() < 0.6 else 0
@@ -323,7 +327,7 @@ def gen_proximity():
             iso_dt(ts), upn, sol, ym,
             random.choice(fnames), cat,
             f"C:/Users/{upn.split('@')[0]}/Documents/{cat}",
-            random.randint(1, 600), name_match, folder_match,
+            random.randint(1, 300), name_match, folder_match,
         ])
     return write_csv("ai_file_proximity.csv", header, rows)
 
@@ -344,39 +348,77 @@ def gen_offhours():
         total = random.randint(5, 300)
         off = random.randint(0, total)
         pct = round(off / total, 4)
-        anom_count = random.choice([0, 0, 0, 1, 1, 2, 3])
+        distinct_countries = random.randint(1, 4)
+        max_anomalous = min(3, distinct_countries - 1)
+        anom_count = random.choice(([0, 0, 0] +
+                                    list(range(1, max_anomalous + 1))))
         if anom_count > 0:
             anoms = ";".join(random.sample(anom_pool, anom_count))
         else:
             anoms = ""
         rows.append([
             upn, ym, total, off, pct,
-            random.randint(1, 4), anom_count, anoms,
+            distinct_countries, anom_count, anoms,
         ])
     return write_csv("ai_offhours_geo.csv", header, rows)
 
 
 # ===========================================================================
-# 8) ai_copilot_usage_graph.csv
+# 8) ai_copilot_usage_graph.csv + ai_copilot_surface_usage.csv
 # ===========================================================================
 
 def gen_copilot_usage():
-    header = ["UserPrincipalName", "YearMonth", "TeamsPrompts", "WordPrompts",
-              "ExcelPrompts", "OutlookPrompts", "PowerPointPrompts",
-              "ChatPrompts", "TotalPrompts", "ActiveDays", "LastActivityDate"]
-    rows = []
+    usage_header = ["UserPrincipalName", "YearMonth", "TeamsPrompts",
+                    "WordPrompts", "ExcelPrompts", "OutlookPrompts",
+                    "PowerPointPrompts", "ChatPrompts", "TotalPrompts",
+                    "ActiveDays", "LastActivityDate"]
+    surface_header = ["UserPrincipalName", "YearMonth", "Surface",
+                      "SourceWorkload", "SourceAppHost", "PromptCount",
+                      "ActiveDays", "LastActivityDate"]
+    surface_specs = [
+        ("Teams", "MicrosoftTeams", "MicrosoftTeams"),
+        ("Word", "Microsoft365", "Word"),
+        ("Excel", "Microsoft365", "Excel"),
+        ("Outlook", "Microsoft365", "Outlook"),
+        ("PowerPoint", "Microsoft365", "PowerPoint"),
+        ("Chat", "Microsoft365", "M365Chat"),
+        ("Loop", "Microsoft365", "Loop"),
+        ("OneNote", "Microsoft365", "OneNote"),
+        ("SharePoint", "Microsoft365", "SharePoint"),
+        ("Edge", "Microsoft365", "Edge"),
+    ]
+    usage_rows = []
+    surface_rows = []
     licensed = sorted(LICENSED_COPILOT)
     for upn in licensed:
         nmonths = random.randint(3, 6)
         months = random.sample(YM_WINDOW, min(nmonths, len(YM_WINDOW)))
         for ym in months:
-            ch = [random.randint(0, 200) for _ in range(6)]
-            total = sum(ch)
-            rows.append([
-                upn, ym, ch[0], ch[1], ch[2], ch[3], ch[4], ch[5],
-                total, random.randint(1, 22), iso_date(ym_to_dt(ym)),
+            counts = {}
+            all_days = set()
+            for surface, workload, app_host in surface_specs:
+                upper = 200 if surface in {"Teams", "Word", "Excel", "Outlook",
+                                           "PowerPoint", "Chat"} else 60
+                prompt_count = random.randint(1, upper)
+                active_day_count = random.randint(1, min(22, prompt_count))
+                active_days = set(random.sample(range(1, 28), active_day_count))
+                all_days.update(active_days)
+                counts[surface] = prompt_count
+                surface_rows.append([
+                    upn, ym, surface, workload, app_host, prompt_count,
+                    len(active_days), iso_date(ym_to_dt(ym, day=max(active_days))),
+                ])
+
+            usage_rows.append([
+                upn, ym, counts["Teams"], counts["Word"], counts["Excel"],
+                counts["Outlook"], counts["PowerPoint"], counts["Chat"],
+                sum(counts.values()), len(all_days),
+                iso_date(ym_to_dt(ym, day=max(all_days))),
             ])
-    return write_csv("ai_copilot_usage_graph.csv", header, rows)
+    return [
+        write_csv("ai_copilot_usage_graph.csv", usage_header, usage_rows),
+        write_csv("ai_copilot_surface_usage.csv", surface_header, surface_rows),
+    ]
 
 
 # ===========================================================================
@@ -388,11 +430,10 @@ def gen_client_channel():
     sites = ["chat.openai.com", "claude.ai", "gemini.google.com",
              "perplexity.ai", "deepseek.com", "midjourney.com",
              "copilot.microsoft.com"]
-    channels = ["Web", "Desktop", "Mobile", "API"]
     rows = []
     for _ in range(60):
         rows.append([
-            random.choice(sites), random.choice(channels),
+            random.choice(sites), random.choice(CLIENT_CHANNELS),
             random.choice(YM_WINDOW), random.randint(1, 5000),
         ])
     return write_csv("ai_client_channel.csv", header, rows)
@@ -458,12 +499,12 @@ def gen_mda():
               "PolicyHit", "PolicyAction", "IPAddress", "CountryCode",
               "EventCount"]
     actions = ["Upload", "Download", "Share", "Login"]
-    policy_actions = ["Allow", "Block", "Monitor"]
+    policy_actions = ["Allow", "Warn", "Block"]
     ccodes = ["US", "GB", "DE", "IE", "CA", "AU"]
     rows = []
     for _ in range(80):
         ym = random.choice(YM_WINDOW)
-        hit = random.choice(["Yes", "No"])
+        hit = random.choice(["TRUE", "FALSE"])
         rows.append([
             iso_dt(ym_to_dt(ym)), ym, random.choice(UPNS),
             random.choice(THIRD_PARTY), random.choice(actions),
@@ -479,6 +520,58 @@ def gen_mda():
 # ===========================================================================
 
 def main():
+    expected_headers = {
+        "EntraUsers.csv": ["userPrincipalName", "displayName", "department",
+                           "jobTitle", "city", "country", "companyName",
+                           "accountEnabled", "userType", "createdDateTime",
+                           "hasLicense", "assignedLicenses",
+                           "manager_displayName", "manager_userPrincipalName"],
+        "ai_solutions_catalog.csv": ["AISolution", "Category", "Vendor",
+                                     "RiskTier", "DefaultDataHandling",
+                                     "SolutionGroup"],
+        "ai_activity_sessions.csv": ["UPN", "AISolution", "YearMonth",
+                                     "Sessions", "ActiveDays",
+                                     "EstimatedPrompts", "DistinctDevices",
+                                     "Category", "RiskTier"],
+        "ai_oauth_consents.csv": ["UPN", "AppName", "YearMonth",
+                                  "ConsentCount", "LastConsent",
+                                  "PermissionWeight", "Permissions"],
+        "ai_sso_signins.csv": ["UPN", "Application", "YearMonth",
+                               "SignInCount", "DistinctDays", "IsGuest",
+                               "Countries", "HasConditionalAccess",
+                               "LastSignIn"],
+        "ai_file_proximity.csv": ["Timestamp", "UPN", "AISolution",
+                                  "YearMonth", "FileName", "FolderCategory",
+                                  "FolderPath", "SecondsToAI",
+                                  "NameMatchesSensitivePattern",
+                                  "FolderMatchesSensitive"],
+        "ai_offhours_geo.csv": ["UPN", "YearMonth", "TotalSessions",
+                                "OffHoursSessions", "OffHoursPct",
+                                "DistinctCountries",
+                                "AnomalousCountryCount",
+                                "AnomalousCountries"],
+        "ai_copilot_usage_graph.csv": ["UserPrincipalName", "YearMonth",
+                                       "TeamsPrompts", "WordPrompts",
+                                       "ExcelPrompts", "OutlookPrompts",
+                                       "PowerPointPrompts", "ChatPrompts",
+                                       "TotalPrompts", "ActiveDays",
+                                       "LastActivityDate"],
+        "ai_copilot_surface_usage.csv": ["UserPrincipalName", "YearMonth",
+                                         "Surface", "SourceWorkload",
+                                         "SourceAppHost", "PromptCount",
+                                         "ActiveDays", "LastActivityDate"],
+        "ai_client_channel.csv": ["AISite", "Channel", "YearMonth",
+                                  "EventCount"],
+        "ai_appgov_alerts.csv": ["Timestamp", "YearMonth", "UPN", "AppName",
+                                 "AlertType", "Severity", "Description"],
+        "ai_cloud_discovery.csv": ["AIDomain", "AppCategory", "YearMonth",
+                                   "RiskScore", "UploadVolumeMB",
+                                   "DownloadVolumeMB", "TransactionCount",
+                                   "DistinctUsers", "SanctionStatus"],
+        "ai_mda_sessions.csv": ["Timestamp", "YearMonth", "UPN", "AppName",
+                                "ActionType", "PolicyHit", "PolicyAction",
+                                "IPAddress", "CountryCode", "EventCount"],
+    }
     results = []
     results.append(gen_entra())
     results.append(gen_catalog())
@@ -487,7 +580,7 @@ def main():
     results.append(gen_sso())
     results.append(gen_proximity())
     results.append(gen_offhours())
-    results.append(gen_copilot_usage())
+    results.extend(gen_copilot_usage())
     results.append(gen_client_channel())
     results.append(gen_appgov())
     results.append(gen_cloud_discovery())
@@ -496,17 +589,22 @@ def main():
     # Build verification report
     lines = []
     lines.append("AI Solutions Test Data - Verification Report")
-    lines.append(f"Generated: {datetime.now().isoformat()}")
+    lines.append("Generated: deterministic")
     lines.append(f"Seed: {SEED}")
-    lines.append(f"Output folder: {OUT_DIR}")
+    lines.append(f"Output folder: {os.path.basename(OUT_DIR)}")
     lines.append("=" * 70)
+    failures = []
     for path, nrows in results:
-        with open(path, "r", encoding="utf-8") as f:
-            header_line = f.readline().rstrip("\r\n")
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            actual_header = next(csv.reader(f))
         fname = os.path.basename(path)
+        header_ok = actual_header == expected_headers[fname]
+        if not header_ok:
+            failures.append(f"{fname}: unexpected header")
         lines.append(f"FILE: {fname}")
         lines.append(f"  ROWS (excl header): {nrows}")
-        lines.append(f"  HEADER: {header_line}")
+        lines.append(f"  HEADER: {','.join(actual_header)}")
+        lines.append(f"  HEADER CONTRACT: {'PASS' if header_ok else 'FAIL'}")
         lines.append("-" * 70)
 
     # Referential integrity checks
@@ -522,6 +620,20 @@ def main():
             for row in r:
                 vals.append(row[col])
         return vals
+
+    def dict_rows(fname):
+        p = os.path.join(OUT_DIR, fname)
+        with open(p, "r", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
+    def check_constraint(fname, label, predicate):
+        invalid_count = sum(1 for row in dict_rows(fname)
+                            if not predicate(row))
+        valid = invalid_count == 0
+        if not valid:
+            failures.append(f"{fname}: {label} ({invalid_count} invalid rows)")
+        lines.append(f"  {fname} {label}: "
+                     f"{'PASS' if valid else 'FAIL ' + str(invalid_count)}")
 
     # AI_Activity AISolution -> catalog
     act_sols = set(col_values("ai_activity_sessions.csv", "AISolution"))
@@ -547,14 +659,107 @@ def main():
     lines.append(f"  ai_copilot_usage_graph UPN all in EntraUsers: "
                  f"{'PASS' if not missing_cop else 'FAIL ' + str(missing_cop)}")
 
-    # Category strings present in activity
-    act_cats = set(col_values("ai_activity_sessions.csv", "Category"))
-    has_unmanaged = "Unmanaged AI" in act_cats
-    has_dev = "Developer AI" in act_cats
-    lines.append(f"  'Unmanaged AI' present in activity Category: "
-                 f"{'PASS' if has_unmanaged else 'FAIL'}")
-    lines.append(f"  'Developer AI' present in activity Category: "
-                 f"{'PASS' if has_dev else 'FAIL'}")
+    surface_upns = set(col_values("ai_copilot_surface_usage.csv",
+                                  "UserPrincipalName"))
+    missing_surface_upn = surface_upns - upn_set
+    lines.append(f"  ai_copilot_surface_usage UPN all in EntraUsers: "
+                 f"{'PASS' if not missing_surface_upn else 'FAIL ' + str(missing_surface_upn)}")
+
+    usage_totals = {}
+    with open(os.path.join(OUT_DIR, "ai_copilot_usage_graph.csv"),
+              "r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            usage_totals[(row["UserPrincipalName"], row["YearMonth"])] = int(
+                row["TotalPrompts"])
+    surface_totals = {}
+    with open(os.path.join(OUT_DIR, "ai_copilot_surface_usage.csv"),
+              "r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            key = (row["UserPrincipalName"], row["YearMonth"])
+            surface_totals[key] = surface_totals.get(key, 0) + int(
+                row["PromptCount"])
+    copilot_totals_match = usage_totals == surface_totals
+    if not copilot_totals_match:
+        failures.append("Copilot legacy and normalized totals do not match")
+    lines.append(f"  Copilot legacy totals match normalized surface totals: "
+                 f"{'PASS' if copilot_totals_match else 'FAIL'}")
+
+    # Exporter risk-tier contract present in activity
+    act_risk = set(col_values("ai_activity_sessions.csv", "RiskTier"))
+    canonical_risk = {"Sanctioned", "Conditional", "Unsanctioned"}
+    activity_risk_ok = act_risk <= canonical_risk
+    if not activity_risk_ok:
+        failures.append("ai_activity_sessions.csv: non-canonical RiskTier")
+    lines.append(f"  Activity RiskTier values are canonical: "
+                 f"{'PASS' if activity_risk_ok else 'FAIL'}")
+
+    catalog_risk = set(col_values("ai_solutions_catalog.csv", "RiskTier"))
+    catalog_risk_ok = catalog_risk <= canonical_risk
+    if not catalog_risk_ok:
+        failures.append("ai_solutions_catalog.csv: non-canonical RiskTier")
+    lines.append(f"  Catalog RiskTier values are canonical: "
+                 f"{'PASS' if catalog_risk_ok else 'FAIL'}")
+
+    boolean_checks = [
+        ("EntraUsers.csv", "accountEnabled"),
+        ("EntraUsers.csv", "hasLicense"),
+        ("ai_sso_signins.csv", "IsGuest"),
+        ("ai_sso_signins.csv", "HasConditionalAccess"),
+        ("ai_mda_sessions.csv", "PolicyHit"),
+    ]
+    for fname, column in boolean_checks:
+        values = set(col_values(fname, column))
+        valid = values <= {"TRUE", "FALSE"}
+        if not valid:
+            failures.append(f"{fname}: {column} is not TRUE/FALSE")
+        lines.append(f"  {fname} {column} uses TRUE/FALSE: "
+                     f"{'PASS' if valid else 'FAIL ' + str(values)}")
+
+    policy_actions = set(col_values("ai_mda_sessions.csv", "PolicyAction"))
+    valid_policy_actions = policy_actions <= {"Allow", "Warn", "Block"}
+    if not valid_policy_actions:
+        failures.append("ai_mda_sessions.csv: non-canonical PolicyAction")
+    lines.append(f"  ai_mda_sessions.csv PolicyAction values are canonical: "
+                 f"{'PASS' if valid_policy_actions else 'FAIL ' + str(policy_actions)}")
+
+    # Production-query invariants used by the report measures.
+    check_constraint(
+        "ai_activity_sessions.csv",
+        "ActiveDays, EstimatedPrompts, and DistinctDevices do not exceed Sessions",
+        lambda row: (
+            int(row["ActiveDays"]) <= int(row["Sessions"])
+            and int(row["EstimatedPrompts"]) <= int(row["Sessions"])
+            and int(row["DistinctDevices"]) <= int(row["Sessions"])
+        ),
+    )
+    check_constraint(
+        "ai_sso_signins.csv",
+        "DistinctDays does not exceed SignInCount",
+        lambda row: int(row["DistinctDays"]) <= int(row["SignInCount"]),
+    )
+    check_constraint(
+        "ai_offhours_geo.csv",
+        "AnomalousCountryCount does not exceed DistinctCountries minus one",
+        lambda row: (
+            int(row["AnomalousCountryCount"])
+            <= int(row["DistinctCountries"]) - 1
+        ),
+    )
+    check_constraint(
+        "ai_file_proximity.csv",
+        "SecondsToAI is within the production 300-second window",
+        lambda row: 0 <= int(row["SecondsToAI"]) <= 300,
+    )
+    check_constraint(
+        "ai_file_proximity.csv",
+        "FolderCategory uses production values",
+        lambda row: row["FolderCategory"] in FOLDER_CATEGORIES,
+    )
+    check_constraint(
+        "ai_client_channel.csv",
+        "Channel uses production values",
+        lambda row: row["Channel"] in CLIENT_CHANNELS,
+    )
 
     # Managed Copilot string present
     has_managed = "Microsoft 365 Copilot" in sol_set
@@ -575,6 +780,8 @@ def main():
 
     print(report)
     print(f"\nVERIFY FILE: {vpath}")
+    if failures:
+        raise RuntimeError("Sample-data validation failed: " + "; ".join(failures))
 
 
 if __name__ == "__main__":
