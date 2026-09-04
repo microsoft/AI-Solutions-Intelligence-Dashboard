@@ -18,6 +18,7 @@
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
+[![Sample Data ZIP](https://img.shields.io/badge/Data-Synthetic%20Sample%20ZIP-orange)](AI-Solutions-Intelligence-Dashboard-V26-Sample-Data.zip)
 [![Sample Data Generator](https://img.shields.io/badge/Report-Sample%20Data%20Generator-orange)](build_v26_sample_data.py)
 [![PBIT Generator](https://img.shields.io/badge/Tool-PBIT%20Generator-red)](generate_pbit_v26_unified.py)
 
@@ -35,7 +36,7 @@
 
 <div align="center"><img src="images/report-preview.gif" alt="Animated preview of all 10 AI Solutions Intelligence Dashboard pages using synthetic sample data" width="900"></div>
 
-*Representative tour of all 10 pages, generated exclusively from the repository's synthetic `sample_data_v26` files. The preview contains aggregate sample metrics only—no tenant or employee data.*
+*Illustrative carousel generated exclusively from the repository's synthetic `sample_data_v26` files. It is not a captured Power BI rendering. The preview contains aggregate sample metrics only—no tenant or employee data.*
 
 ---
 
@@ -70,9 +71,9 @@ Run our updated scripts — they page past Defender's 10,000-row cap for you.
 ### 🧪 Just exploring
 **Sample data**
 
-Generate realistic sample CSVs and tour the report with no tenant access.
+Download the matching synthetic CSV package and tour the report with no tenant access.
 
-➡️ **[Sample Data Generator](build_v26_sample_data.py)**
+➡️ **[Download Sample Data ZIP](AI-Solutions-Intelligence-Dashboard-V26-Sample-Data.zip)** · [Sample Data Generator](build_v26_sample_data.py)
 
 </td>
 </tr>
