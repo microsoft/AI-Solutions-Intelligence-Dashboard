@@ -185,7 +185,26 @@ h2 {
   max-width: 70ch;
 }
 
-/* ---------- Report preview placeholder ---------- */
+/* ---------- Report preview ---------- */
+.preview-figure {
+  margin: 1.25rem 0 0;
+  padding: 0;
+}
+.preview-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(27, 31, 39, 0.14);
+}
+.preview-figure figcaption {
+  margin-top: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
 .preview-placeholder {
   background: var(--bg-soft);
   border: 2px dashed var(--line);

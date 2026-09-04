@@ -33,10 +33,9 @@
 
 ## ▶️ Report preview
 
-<!-- To enable the animated preview: record the report cycling through its pages, export as images/report-preview.gif, then uncomment the line below. -->
-<!-- <div align="center"><img src="images/report-preview.gif" alt="AI Solutions Intelligence Dashboard preview" width="900"></div> -->
+<div align="center"><img src="images/report-preview.gif" alt="Animated preview of all 10 AI Solutions Intelligence Dashboard pages using synthetic sample data" width="900"></div>
 
-*An animated tour of all 10 pages is coming soon. Scroll down to the **Report Pages Overview** for a page-by-page description.*
+*Representative tour of all 10 pages, generated exclusively from the repository's synthetic `sample_data_v26` files. The preview contains aggregate sample metrics only—no tenant or employee data.*
 
 ---
 
