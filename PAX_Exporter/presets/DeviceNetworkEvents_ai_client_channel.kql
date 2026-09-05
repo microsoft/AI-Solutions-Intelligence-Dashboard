@@ -21,7 +21,8 @@
 //
 // NOTE: this preset aggregates by AISite/Channel/YearMonth (no user dimension),
 // so it carries NO user-filter token and is EXEMPT from user-hash bucketing.
-// A single month of client-channel aggregates is far below the 10,000-row cap.
+// A single month of client-channel aggregates is normally below the conservative
+// 10,000-row local partition threshold.
 //
 // ===========================================================================
 // EDIT HERE - the list of AI websites to collect (customer-configurable)

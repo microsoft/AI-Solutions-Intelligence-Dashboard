@@ -39,15 +39,21 @@ The tool automatically retries up to 5 times with exponential backoff, honoring 
 
 If you see:
 
-> Minimal window … still returned >= RowCap … Records within this window may be truncated by the API; keeping N returned rows.
+> Minimal window ... still returned >= RowCap ... Current service count or size
+> quotas may affect completeness; keeping N returned rows for review.
 
-…it means a **single 1-minute window** matched 10,000+ rows. The tool can't subdivide below `MinWindowMinutes`, so those rows may be truncated. Fixes:
+It means a **single 1-minute window** reached the exporter's conservative local
+threshold (10,000 by default). The tool cannot subdivide below
+`MinWindowMinutes`. Current service quotas can also be reached by row count or
+result size. Fixes:
 
 - **Make the KQL more selective** — add tighter `where` filters so fewer rows match (see [presets-and-kql.md](presets-and-kql.md)).
-- **Project fewer columns** — smaller rows won't reduce the count, but a tighter filter will.
+- **Project fewer columns** — this can reduce result size, while only tighter filters reduce row count.
 - As a last resort, lower `-TargetRowsPerWindow` (e.g. `4000`) so windows are sized more conservatively before the floor.
 
-This warning reflects a genuine API limitation, not a bug — the data is simply denser than 10,000 rows per minute.
+This warning is a required completeness-review signal, not proof of truncation.
+Compare the period with portal/source expectations and current Advanced Hunting
+service limits.
 
 ---
 

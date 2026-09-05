@@ -2,14 +2,14 @@
     Export-DefenderAdvancedHunting.Tests.ps1
 
     CREDENTIAL-FREE, deterministic test proving the exporter recovers ALL rows
-    beyond the 10,000-row API cap via adaptive time-slicing.
+    beyond the conservative 10,000-row partition threshold via adaptive time-slicing.
 
     Strategy:
       * Build a synthetic 25,000-row dataset with unique Ids and non-uniform
         Timestamps, including a dense burst so subdivision is forced.
       * Inject a -QueryExecutor mock that filters to the half-open window and
-        returns AT MOST RowCap rows ordered by Timestamp (exactly how the real
-        API truncates), which forces the algorithm to subdivide.
+        returns AT MOST RowCap rows ordered by Timestamp, simulating a threshold-
+        reaching response so the algorithm is forced to subdivide.
       * Assert all 25,000 unique Ids are recovered, none duplicated, at least
         one subdivision occurred, and no partition was truncated at the floor.
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Solutions Intelligence Dashboard</title>
-  <meta name="description" content="A single Power BI report that delivers a complete, defensible view of AI usage across your Microsoft 365 tenant.">
+  <meta name="description" content="Experimental Power BI template for source-dependent AI adoption and governance indicators.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,144 +12,142 @@
 
   <header class="hero">
     <div class="container">
-      <p class="version-badge">version v26.1 &mdash; Validated</p>
+      <p class="version-badge">V27 - In Testing</p>
       <h1>AI Solutions Intelligence Dashboard</h1>
       <p class="lede">
-        A single Power BI report that delivers a complete, defensible view of AI
-        usage across your Microsoft&nbsp;365 tenant &mdash; Copilot adoption,
-        shadow AI, OAuth risk, off-hours/geo anomalies, and (optionally) MDA App
-        Governance &amp; Cloud Discovery &mdash; all in one PBIT.
+        A Power BI template that brings together source-dependent indicators for
+        Copilot adoption, third-party AI activity, OAuth consent risk,
+        off-hours/geo patterns, and optional Defender for Cloud Apps data.
       </p>
 
       <p class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip">
-          &#128229; Download All Files
+        <a class="btn btn-primary"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/raw/refs/heads/main/AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit">
+          Download V27 In Testing
+        </a>
+        <a class="btn btn-secondary"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/raw/refs/heads/main/AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit">
+          Download stable V26
         </a>
       </p>
 
       <div class="note" role="note">
-        <strong>v26.1 &mdash; June 23, 2026:</strong> All KQL queries in
-        <code>kql_queries_v22_E5V3.kql</code> have been live-tested against a real
-        tenant. Eight bugs fixed across B2, B4, B6, and B8 (UPN resolution, schema
-        portability between Sentinel and native Defender XDR, KQL syntax errors).
-        B3 and B5 validated clean. See the
-        <a href="../kql_queries_v22_E5V3.kql">query pack changelog</a> for details.
+        <strong>September 4, 2026:</strong> V27 adds a visual redesign,
+        collapsible filters, corrected month-over-month KPIs, actual Power BI
+        previews, an interpretation guide, and a narrated walkthrough. It remains
+        In Testing. The V26 13-file contract is unchanged.
       </div>
 
-      <p class="related-label">Related Templates &amp; Tools:</p>
-      <nav class="badge-row" aria-label="Related templates and tools">
-        <a class="badge badge-green" href="../DATA_SETUP_START_HERE.md">Guide: Start Here</a>
-        <a class="badge badge-violet" href="../PAX_Exporter/README.md">Tool: PAX Exporter</a>
-        <a class="badge badge-blue" href="../AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit">Report: Dashboard PBIT</a>
-        <a class="badge badge-teal" href="../AI_Usage_v26_Blueprint.md">Report: Architecture Blueprint</a>
-        <a class="badge badge-purple" href="../INSTRUCTIONS_v26.md">Report: Setup Instructions</a>
-        <a class="badge badge-darkgreen" href="../kql_queries_v22_E5V3.kql">Report: KQL Query Pack</a>
-        <a class="badge badge-orange" href="../build_v26_sample_data.py">Report: Sample Data Generator</a>
-        <a class="badge badge-red" href="../generate_pbit_v26_unified.py">Tool: PBIT Generator</a>
-      </nav>
-
-      <p class="related-label">Additional Resources:</p>
-      <nav class="link-row" aria-label="Additional resources">
-        <a href="https://learn.microsoft.com/defender-endpoint/">Defender for Endpoint docs</a>
-        <span aria-hidden="true">&middot;</span>
-        <a href="https://learn.microsoft.com/defender-cloud-apps/">Defender for Cloud Apps docs</a>
-        <span aria-hidden="true">&middot;</span>
-        <a href="https://learn.microsoft.com/purview/audit-solutions-overview">Microsoft Purview Audit docs</a>
-        <span aria-hidden="true">&middot;</span>
-        <a href="https://learn.microsoft.com/graph/api/resources/report">Microsoft Graph Reports API</a>
+      <p class="related-label">Guides and tools:</p>
+      <nav class="badge-row" aria-label="Guides and tools">
+        <a class="badge badge-green"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/DATA_SETUP_START_HERE.md">Start Here</a>
+        <a class="badge badge-violet"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/PAX_Exporter/README.md">PAX Exporter</a>
+        <a class="badge badge-purple"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/INTERPRETATION_GUIDE.md">Interpretation Guide</a>
+        <a class="badge badge-teal"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/INSTRUCTIONS_v26.md">Setup Instructions</a>
+        <a class="badge badge-darkgreen"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/kql_queries_v22_E5V3.kql">KQL Query Pack</a>
+        <a class="badge badge-orange"
+          href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/raw/refs/heads/main/media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4">Video Walkthrough</a>
       </nav>
     </div>
   </header>
 
   <main id="main" class="container">
-
     <section class="preview" aria-labelledby="preview-h">
-      <h2 id="preview-h">&#9654;&#65039; Report preview</h2>
+      <h2 id="preview-h">Actual report preview</h2>
       <figure class="preview-figure">
-        <img class="preview-image" src="../images/report-preview.gif"
-          alt="Animated preview of all 10 AI Solutions Intelligence Dashboard pages using synthetic sample data">
+        <img class="preview-image"
+          src="https://raw.githubusercontent.com/microsoft/AI-Solutions-Intelligence-Dashboard/main/images/report-preview.gif"
+          alt="Animated sequence of ten actual Power BI report captures loaded with synthetic sample data">
         <figcaption>
-          Illustrative carousel, not a captured Power BI rendering. It was
-          generated exclusively from synthetic sample files and contains
-          aggregate sample metrics only.
+          Actual Power BI Desktop captures from V27 In Testing, loaded only with
+          deterministic synthetic sample data. No tenant or employee data is shown.
         </figcaption>
       </figure>
     </section>
 
+    <section class="warning-panel" aria-labelledby="notice-h">
+      <h2 id="notice-h">Experimental use and compliance notice</h2>
+      <p>
+        V27 is In Testing. This template is an investigation and planning aid, not
+        a sole source of truth for licensing, security, privacy, legal, compliance,
+        personnel, or procurement decisions. Coverage depends on licensing,
+        onboarding, connectors, retention, permissions, and configured app/domain
+        lists.
+      </p>
+      <p>
+        Risk scores and anomalies are heuristic triage signals. File proximity is
+        temporal correlation, not proof of upload, disclosure, misuse, or data
+        leakage. Customers are responsible for lawful collection, notices and
+        consent, access controls, sensitivity labels, retention, data residency,
+        and compliance. This public template does not upload customer data to this
+        repository; customers control collection, storage, deployment, and sharing.
+      </p>
+      <p>
+        The sample package is fabricated and unsuitable for operational decisions.
+        Read the
+        <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/INTERPRETATION_GUIDE.md#usage-and-compliance-disclaimer">full disclaimer</a>.
+      </p>
+    </section>
+
     <section class="collect" aria-labelledby="collect-h">
-      <h2 id="collect-h">&#129517; Choose how to collect your data</h2>
+      <h2 id="collect-h">Choose how to collect data</h2>
       <p class="section-intro">
-        Every tenant loads the <strong>same report</strong> from the
-        <strong>same 13 CSV files</strong> &mdash; you just pick how to generate them.
+        Both paths produce the same 13-file CSV contract. Choose based on expected
+        event volume and collection cadence, not tenant user count.
       </p>
       <div class="card-grid grid-3">
         <article class="card">
-          <h3><span class="dot dot-green" aria-hidden="true"></span>Under ~10,000 users</h3>
-          <p class="card-kicker">Manual CSV export</p>
-          <p>Copy-paste queries into the portal and click Export. A few files need one short PowerShell step.</p>
+          <h3><span class="dot dot-green" aria-hidden="true"></span>One-time or smaller pull</h3>
+          <p class="card-kicker">Manual portal export</p>
+          <p>Use when expected event volume fits portal export limits, plus the supplied Graph and Purview collectors.</p>
           <p class="card-cta">
-            <a href="../DATA_SETUP_START_HERE.md">Start Here</a>
-            <span aria-hidden="true">&middot;</span>
-            <a href="../INSTRUCTIONS_v26.md">Full manual guide</a>
+            <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/DATA_SETUP_START_HERE.md">Start Here</a>
           </p>
         </article>
         <article class="card">
-          <h3><span class="dot dot-blue" aria-hidden="true"></span>Over ~10,000 users</h3>
+          <h3><span class="dot dot-blue" aria-hidden="true"></span>Repeat or high-volume pull</h3>
           <p class="card-kicker">Automated PAX exporter</p>
-          <p>Run our updated scripts &mdash; they page past Defender's 10,000-row cap for you.</p>
+          <p>Use conservative adaptive partitioning and review saturation warnings and source retention.</p>
           <p class="card-cta">
-            <a href="../PAX_Exporter/README.md">PAX Exporter</a>
+            <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/PAX_Exporter/README.md">PAX Exporter</a>
           </p>
         </article>
         <article class="card">
-          <h3><span class="dot dot-violet" aria-hidden="true"></span>Just exploring</h3>
-          <p class="card-kicker">Sample data</p>
-          <p>Download the matching synthetic CSV package and tour the report with no tenant access.</p>
+          <h3><span class="dot dot-violet" aria-hidden="true"></span>Explore safely</h3>
+          <p class="card-kicker">Synthetic sample data</p>
+          <p>Tour the report with fabricated sample identities and metrics. Do not use them for operational decisions.</p>
           <p class="card-cta">
-            <a href="../AI-Solutions-Intelligence-Dashboard-V26-Sample-Data.zip">Sample Data ZIP</a>
-            <span aria-hidden="true">&middot;</span>
-            <a href="../build_v26_sample_data.py">Sample Data Generator</a>
+            <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/raw/refs/heads/main/AI-Solutions-Intelligence-Dashboard-V26-Sample-Data.zip">Sample Data ZIP</a>
           </p>
         </article>
       </div>
     </section>
 
     <section class="continue" aria-labelledby="continue-h">
-      <h2 id="continue-h">&#128218; Continue reading</h2>
+      <h2 id="continue-h">Release resources</h2>
       <div class="card-grid grid-3">
         <article class="card">
           <p class="card-num">1</p>
-          <h3><a href="../DATA_SETUP_START_HERE.md">Start Here</a></h3>
-          <p>The friendly, non-technical overview. Begin here if you're new.</p>
+          <h3><a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/DATA_SETUP_START_HERE.md">Set up the data</a></h3>
+          <p>Validated roles, permissions, product dependencies, and CSV steps.</p>
         </article>
         <article class="card">
           <p class="card-num">2</p>
-          <h3><a href="../INSTRUCTIONS_v26.md">Setup &amp; data collection</a></h3>
-          <p>Every CSV, click-by-click &mdash; Graph, Purview, and Defender.</p>
+          <h3><a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/INTERPRETATION_GUIDE.md">Interpret the report</a></h3>
+          <p>Page-by-page reading guidance, action prompts, limitations, and disclaimer.</p>
         </article>
         <article class="card">
           <p class="card-num">3</p>
-          <h3><a href="../PAX_Exporter/README.md">Automated exporter</a></h3>
-          <p>Run the PAX scripts to pull everything, past the 10K-row cap.</p>
-        </article>
-        <article class="card">
-          <p class="card-num">4</p>
-          <h3><a href="../kql_queries_v22_E5V3.kql">KQL query pack</a></h3>
-          <p>The six validated Defender Advanced Hunting queries (v26.1).</p>
-        </article>
-        <article class="card">
-          <p class="card-num">5</p>
-          <h3><a href="../AI_Usage_v26_Blueprint.md">Architecture blueprint</a></h3>
-          <p>The tier model, measure design, and generator pipeline.</p>
-        </article>
-        <article class="card">
-          <p class="card-num">6</p>
-          <h3><a href="../SECURITY.md">Security &amp; license</a></h3>
-          <p>Read-only permissions, data handling, and licensing notes.</p>
+          <h3><a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/raw/refs/heads/main/media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4">Watch the walkthrough</a></h3>
+          <p>A narrated tour built from the same actual report captures and guidance.</p>
         </article>
       </div>
     </section>
-
   </main>
 
   <footer class="site-footer">
@@ -158,7 +156,9 @@
       <p class="footer-links">
         <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard">View on GitHub</a>
         <span aria-hidden="true">&middot;</span>
-        <a href="../README.md">Read the full README</a>
+        <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/blob/main/README.md">Full README</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/issues">Report an issue</a>
       </p>
     </div>
   </footer>

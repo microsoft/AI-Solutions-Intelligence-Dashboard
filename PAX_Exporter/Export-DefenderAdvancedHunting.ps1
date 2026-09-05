@@ -1,20 +1,20 @@
 <#
 .SYNOPSIS
-    Exports ALL rows from a Microsoft Defender Advanced Hunting (Microsoft Graph
-    security/runHuntingQuery) KQL query, defeating the hard 10,000-row-per-query
-    cap by adaptive time-slicing.
+    Exports Microsoft Defender Advanced Hunting rows with conservative adaptive
+    time-slicing.
 
 .DESCRIPTION
-    Microsoft Defender Advanced Hunting returns a HARD MAXIMUM of 10,000 rows per
-    query with NO continuation / paging token. This tool defeats that wall by
-    reusing the adaptive time-slicing strategy from PAX
+    Microsoft Defender Advanced Hunting enforces result-count and result-size
+    quotas and does not provide a continuation token for runHuntingQuery. This
+    tool uses a conservative, configurable row threshold and reuses the adaptive
+    time-slicing strategy from PAX
     (PAX_Purview_Audit_Log_Processor_v1.11.11.ps1):
 
       * The overall [StartDate, EndDate) range is split into an initial queue of
         half-open time partitions.
-      * Each partition is queried. If it returns >= RowCap rows it is SATURATED,
-        meaning rows were almost certainly truncated by the API. The partition is
-        SUBDIVIDED and the sub-windows are pushed back onto the work queue.
+      * Each partition is queried. If it returns >= RowCap rows it reaches the
+        local partition threshold. The partition is SUBDIVIDED and the
+        sub-windows are pushed back onto the work queue.
       * SMART SUBDIVISION (mirrors PAX): instead of blindly halving, the tool
         measures the timespan actually covered by the saturated batch, estimates
         records/hour, and picks a subdivision factor that targets
@@ -79,8 +79,9 @@
     are kept. Defaults to 1.
 
 .PARAMETER RowCap
-    Saturation threshold. A partition returning >= RowCap rows triggers
-    subdivision. Defaults to 10000 (the real API cap).
+    Conservative local partition threshold. A partition returning >= RowCap rows
+    triggers subdivision. Defaults to 10000, below the currently documented
+    service row quota. This does not detect every possible result-size truncation.
 
 .PARAMETER TargetRowsPerWindow
     Smart-subdivision target row count per sub-window (buffer below RowCap,
@@ -118,8 +119,8 @@
     Ceiling on the hash-bucket doubling for -UserBucketColumn. Must be >= 2 when
     -UserBucketColumn is supplied. If a bucket STILL saturates at this ceiling,
     the rows are kept, SaturatedWindowHit is set, and a warning is emitted
-    (genuine per-user volume beyond the API cap within a single month). Defaults
-    to 64.
+    because the configured local RowCap threshold was reached and service count
+    or size quotas may affect completeness. Defaults to 64.
 
 .PARAMETER AccessToken
     A pre-acquired Microsoft Graph bearer token. If supplied it is used directly
@@ -479,7 +480,7 @@ while ($queue.Count -gt 0) {
     $partitionsExecuted++
 
     if ($count -ge $RowCap) {
-        # SATURATED — this window very likely truncated rows.
+        # Local partition threshold reached.
         if ($PartitionMode -eq 'Month') {
             # MONTH mode: NEVER subdivide by TIME (splitting a calendar month
             # corrupts per-month distinct counts). If a user-hash bucket column
@@ -512,10 +513,10 @@ while ($queue.Count -gt 0) {
                 $bucketsUsed = [Math]::Min($bucketCount, $MaxUserBuckets)
                 if ($bucketsUsed -gt $maxUserBucketsUsed) { $maxUserBucketsUsed = $bucketsUsed }
                 if ($bucketSaturated) {
-                    # Even at MaxUserBuckets a bucket still saturates: genuine
-                    # per-user volume beyond the API cap. Keep the last attempt.
+                    # Even at MaxUserBuckets a bucket still reaches the local
+                    # threshold. Keep the last attempt and flag for review.
                     $saturatedWindowHit = $true
-                    Write-Warning "Calendar-month window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) still returned a saturated hash bucket at MaxUserBuckets=$MaxUserBuckets. Its monthly aggregates may be truncated by the API. Keeping all bucketed rows from the final attempt."
+                    Write-Warning "Calendar-month window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) still reached RowCap in a hash bucket at MaxUserBuckets=$MaxUserBuckets. Current service count or size quotas may affect completeness. Keeping all bucketed rows from the final attempt; review the output."
                     foreach ($r in $lastAttempt) { $results.Add($r) }
                 }
                 else {
@@ -525,18 +526,18 @@ while ($queue.Count -gt 0) {
                 continue
             }
 
-            # No bucketing configured: keep the (possibly API-truncated) rows and warn.
+            # No bucketing configured: keep the rows and flag for completeness review.
             $saturatedWindowHit = $true
-            Write-Warning "Calendar-month window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) returned >= RowCap ($count). Its monthly aggregates may be truncated by the API. Configure -UserBucketColumn (with a {USERFILTER} token in the query) to bucket users within saturated months and keep dcounts exact. Keeping $count returned rows without subdivision."
+            Write-Warning "Calendar-month window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) returned >= RowCap ($count). Current service count or size quotas may affect completeness. Configure -UserBucketColumn (with a {USERFILTER} token in the query) to bucket users within threshold-reaching months and keep dcounts exact. Keeping $count returned rows without subdivision; review the output."
             foreach ($r in $rows) { $results.Add($r) }
             continue
         }
 
         $atFloor = $windowHours -le ($minWindowHours + 1e-9)
         if ($atFloor) {
-            # Cannot subdivide further; keep what we got and warn (true API limitation).
+            # Cannot subdivide further; keep what we got and flag for review.
             $minWindowHit = $true
-            Write-Warning "Minimal window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) (~$([Math]::Round($windowHours*60,2)) min) still returned >= RowCap ($count). Records within this window may be truncated by the API; keeping $count returned rows."
+            Write-Warning "Minimal window $($part.Start.ToString('u')) -> $($part.End.ToString('u')) (~$([Math]::Round($windowHours*60,2)) min) still returned >= RowCap ($count). Current service count or size quotas may affect completeness; keeping $count returned rows for review."
             foreach ($r in $rows) { $results.Add($r) }
             continue
         }
@@ -581,7 +582,7 @@ while ($queue.Count -gt 0) {
         }
 
         $subdivisionEvents++
-        Write-Progress-Log "[SUBDIVIDE] $($part.Start.ToString('u')) -> $($part.End.ToString('u')) ($([Math]::Round($windowHours,3))h) returned $count >= cap; split into $subdivisionFactor. Queue=$($queue.Count)" ([ConsoleColor]::Yellow)
+        Write-Progress-Log "[SUBDIVIDE] $($part.Start.ToString('u')) -> $($part.End.ToString('u')) ($([Math]::Round($windowHours,3))h) returned $count >= RowCap; split into $subdivisionFactor. Queue=$($queue.Count)" ([ConsoleColor]::Yellow)
     }
     else {
         # ACCEPTED

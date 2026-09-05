@@ -1,6 +1,6 @@
 # PAX Exporter — get all 13 AI Solutions dashboard files
 
-This tool collects the **thirteen CSV files** the AI Solutions Intelligence Dashboard (`.pbit`) needs, straight from your Microsoft 365 tenant. It is the automated path for organizations with **more than ~10,000 rows** of AI activity (the manual portal-export path hits a 10,000-row wall).
+This tool produces the **thirteen CSV files** the AI Solutions Intelligence Dashboard (`.pbit`) needs from configured Microsoft 365 data sources. It is the automated path for repeat or high-volume collection and conservatively partitions Advanced Hunting queries into smaller time windows.
 
 > **TL;DR:** run three short PowerShell commands, point the dashboard at the output folder, done. No coding required.
 
@@ -21,7 +21,7 @@ The dashboard imports thirteen CSVs. Here is exactly where each one comes from:
 | 5 | ai_oauth_consents.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All |
 | 6 | ai_sso_signins.csv | `Collect-AISolutionsGraph.ps1` | AuditLog.Read.All |
 | 7 | ai_file_proximity.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
-| 8 | ai_offhours_geo.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
+| 8 | ai_offhours_geo.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All + Entra ID P2 + `EntraIdSignInEvents` |
 | 9 | ai_solutions_catalog.csv | `Collect-AISolutionsGraph.ps1` (auto-seeded) | nothing — review & customize |
 | 10 | ai_client_channel.csv | `Invoke-AISolutionsExport.ps1` | ThreatHunting.Read.All |
 | 11 | ai_appgov_alerts.csv | `Invoke-AISolutionsExport.ps1` (placeholder) | Microsoft Defender for Cloud Apps — optional |
@@ -89,6 +89,16 @@ LicenseAssignment.Read.All — file 1 (resolves license GUIDs to `skuPartNumber`
 AuditLog.Read.All — files 4 and 5 (consents and sign-ins)
 For file #2 (Copilot usage) you also need an account that can run Exchange Online audit search
 
+- Add the four Graph permissions as **Application permissions** for the documented
+  app-only path. A Privileged Role Administrator or Global Administrator must
+  grant tenant-wide admin consent.
+- For `Search-UnifiedAuditLog`, the interactive collector identity needs
+  **View-Only Audit Logs** or **Audit Logs** in Exchange Online. Purview portal
+  search/export instead uses **Audit Reader** or **Audit Manager**; eDiscovery
+  roles alone do not satisfy the cmdlet prerequisite.
+- Delegated/interactive Graph access also depends on the signed-in user's supported
+  Entra or Defender role. See [authentication.md](docs/authentication.md).
+
 ### 4. How you'll sign in (pick one)
 
 You prove who you are to Microsoft Graph one of two ways:
@@ -127,6 +137,9 @@ cd "C:\Users\YourName\Desktop\AI-Solutions-Intelligence-Dashboard\PAX_Exporter"
 Decide the start and end of the period you want to report on. Dates are written `YYYY-MM-DD`; the end date is **exclusive**. Native Defender Advanced Hunting commonly exposes about 30 days of data, while Entra and Purview retention depends on licensing and policy. A larger requested range does not recover data that the source no longer retains.
 
 > `ai_activity_sessions.csv` uses `CloudAppEvents`, which requires Defender for Cloud Apps data in Advanced Hunting. MDE Plan 2 alone provides the device-event tables used by files 7 and 10, but not `CloudAppEvents`.
+> For a tenant without `CloudAppEvents`, add `-SkipActivitySessions` to the
+> Step 4 command. The orchestrator creates the exact header-only
+> `ai_activity_sessions.csv` and continues with the other three presets.
 
 ### Step 3 — Get your Graph credentials ready
 
@@ -147,7 +160,10 @@ $secret = Read-Host -AsSecureString 'Client secret'
 .\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory '.\dashboard_data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret
 ```
 
-This writes the four Defender files plus the three MDA placeholder files into `.\dashboard_data`. You'll see progress as each time window is queried.
+This writes the four Defender files plus the three MDA placeholder files into
+`.\dashboard_data`. With `-SkipActivitySessions`, the activity file is a
+header-only stub and the other three Defender presets still run. You'll see
+progress as each time window is queried.
 
 ### Step 5 — Files 1, 5, 6, 9: Microsoft Graph
 
@@ -211,6 +227,8 @@ If you have MDA, export those three reports yourself and save them into your out
 
 ---
 
+<a id="sensitive-data-warning"></a>
+
 ## ⚠️ Sensitive data warning
 
 **The CSVs this tool produces contain raw audit data** — user identifiers, IP addresses, geolocation, user agents, and resource names, depending on the query.
@@ -219,6 +237,11 @@ If you have MDA, export those three reports yourself and save them into your out
 - **You are responsible** for storing, transmitting, and disposing of this data securely and in line with your organization's policies and applicable law.
 - **Never commit exported CSVs** or credentials to source control (see [.gitignore](.gitignore)).
 - **Never paste tokens or secrets into files** — pass them at runtime only.
+- The generated CSVs and derived PBIX files are **not automatically labeled,
+  encrypted, or access-controlled**. Apply organizational sensitivity labels,
+  retention, storage controls, and least-access rules before sharing.
+- Purview audit-derived Copilot values are directional and can differ from the
+  official Microsoft 365 Copilot usage report.
 
 See [SECURITY.md](SECURITY.md) for responsible-use guidance.
 
@@ -226,9 +249,17 @@ See [SECURITY.md](SECURITY.md) for responsible-use guidance.
 
 ## Advanced — run a single Defender query yourself
 
-Under the hood, the four Defender files are produced by `Export-DefenderAdvancedHunting.ps1`, which solves the **10,000-row problem**.
+Under the hood, the four Defender files are produced by
+`Export-DefenderAdvancedHunting.ps1`. It uses a conservative default saturation
+threshold of 10,000 rows to subdivide time windows before they approach current
+Advanced Hunting result limits.
 
-> Microsoft Defender Advanced Hunting returns a **hard maximum of 10,000 rows per query** with no paging token — extra rows are silently dropped. This exporter defeats that with **adaptive time-slicing**: it splits your date range into windows, and any window that comes back full (at the cap) is automatically subdivided until every piece is under the cap. All pieces merge into one complete CSV, with no duplicates (each window is a half-open interval).
+> Current Microsoft documentation lists result-set quotas of up to 100,000 rows
+> and 64 MB. Limits can change, and a result-size ceiling can be reached before a
+> row threshold. The exporter's configurable `RowCap` is therefore a conservative
+> partitioning trigger, not a statement of the current service maximum. Review
+> saturation warnings, source retention, and output reasonableness before treating
+> an export as complete.
 
 You normally don't need to call it directly — `Invoke-AISolutionsExport.ps1` runs it for all four presets with the right settings. But if you want to run one query yourself:
 

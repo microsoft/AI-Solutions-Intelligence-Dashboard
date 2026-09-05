@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    Orchestrates the AI Solutions dashboard export: runs all four Defender
-    Advanced Hunting presets, creates the three MDA fallback stubs, and
-    optionally adds the six Section-A Graph/Purview artifacts.
+    Orchestrates the AI Solutions dashboard export: runs the available Defender
+    Advanced Hunting presets, creates required fallback stubs, and optionally
+    adds the six Section-A Graph/Purview artifacts.
 
 .DESCRIPTION
     The AI Solutions dashboard (pbit) imports thirteen CSVs. FOUR of them are
@@ -22,6 +22,10 @@
     CREATE-IF-MISSING: if a real MDA CSV is already present in -OutputDirectory
     it is left untouched (never clobbered by a header-only stub).
 
+    CloudAppEvents also depends on MDA. For a tenant without that table, use
+    -SkipActivitySessions to skip only that preset and create a header-only
+    ai_activity_sessions.csv. The other three Advanced Hunting presets continue.
+
     With -IncludeSectionA, the orchestrator also runs the bundled Graph and
     Purview collectors to produce the remaining six CSVs, for all thirteen
     dashboard artifacts in one command. This path requires the additional Graph
@@ -36,8 +40,8 @@
     injected -QueryExecutor mock seam. NO secret, token, tenant id, or client id
     value is ever hardcoded or logged.
 
-    Failures propagate as thrown exceptions (fail-fast): a partial dashboard
-    dataset is worse than a loud, obvious failure.
+    Failures propagate as thrown exceptions (fail-fast), except for a source the
+    caller explicitly skips with -SkipActivitySessions.
 
 .PARAMETER StartDate
     Inclusive start of the export window (half-open interval start), passed
@@ -74,6 +78,12 @@
     exporter's -QueryExecutor parameter. When supplied, NO credentials are
     required and Microsoft Graph is never called. Takes precedence over
     -AccessToken and the app-registration trio.
+
+.PARAMETER SkipActivitySessions
+    Skips the CloudAppEvents preset and creates ai_activity_sessions.csv with
+    its exact header if the file does not already exist. Use this for tenants
+    without Defender for Cloud Apps or the CloudAppEvents table. The remaining
+    three Advanced Hunting presets still run.
 
 .PARAMETER SkipStubs
     When set, the three header-only MDA stub CSVs are NOT written. The four real
@@ -140,6 +150,8 @@ param(
     [securestring]$ClientSecret,
 
     [scriptblock]$QueryExecutor,
+
+    [switch]$SkipActivitySessions,
 
     [switch]$SkipStubs,
 
@@ -247,6 +259,29 @@ foreach ($p in $presetManifest) {
     }
 
     $outPath = Join-Path $OutputDirectory $p.Artifact
+
+    if ($SkipActivitySessions -and $p.Artifact -eq 'ai_activity_sessions.csv') {
+        if (Test-Path $outPath) {
+            $status = 'SkippedExisting'
+        }
+        else {
+            [System.IO.File]::WriteAllText(
+                $outPath,
+                (($p.OutputColumns -join ',') + "`n")
+            )
+            $status = 'StubCreated'
+        }
+        $presetResults.Add([PSCustomObject]@{
+            Artifact         = $p.Artifact
+            Path             = $outPath
+            PartitionMode    = $p.PartitionMode
+            UserBucketColumn = $p.UserBucketColumn
+            TotalRows        = 0
+            Status           = $status
+        })
+        Write-Host ("  preset {0}: {1}" -f $status, $p.Artifact) -ForegroundColor Cyan
+        continue
+    }
 
     $exporterArgs = @{
         Query         = $kql
@@ -357,7 +392,8 @@ if ($IncludeSectionA) {
 # ---------------------------------------------------------------------------
 # Readable summary (Write-Host does not pollute the pipeline) + return object.
 # ---------------------------------------------------------------------------
-$presetCount = $presetResults.Count
+$presetCount = @($presetResults | Where-Object { $_.Status -eq 'OK' }).Count
+$skippedPresetCount = @($presetResults | Where-Object { $_.Status -ne 'OK' }).Count
 $stubCount = if ($SkipStubs) { 0 } else { $stubResults.Count }
 
 Write-Host ""
@@ -365,6 +401,7 @@ Write-Host "==== AI Solutions export summary ====" -ForegroundColor White
 Write-Host ("OutputDirectory : {0}" -f $OutputDirectory)
 Write-Host ("Window          : {0} -> {1}" -f $StartDate.ToString('u'), $EndDate.ToString('u'))
 Write-Host ("Presets run     : {0}" -f $presetCount)
+Write-Host ("Presets stubbed : {0}" -f $skippedPresetCount)
 Write-Host ("MDA stubs       : {0}" -f $stubCount)
 Write-Host ("Section-A       : {0}" -f $(if ($IncludeSectionA) { 'included (6 CSVs)' } else { 'skipped' }))
 Write-Host ""
@@ -376,6 +413,7 @@ return [PSCustomObject]@{
     Presets         = $presetResults.ToArray()
     Stubs           = $stubResults.ToArray()
     PresetCount     = $presetCount
+    SkippedPresetCount = $skippedPresetCount
     StubCount       = $stubCount
     SectionAIncluded = [bool]$IncludeSectionA
     SectionA         = $sectionA

@@ -89,7 +89,12 @@ a:hover { text-decoration: underline; }
   margin: 0 0 1.5rem;
 }
 
-.cta-row { margin: 0 0 1.5rem; }
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+}
 
 .btn {
   display: inline-block;
@@ -104,6 +109,11 @@ a:hover { text-decoration: underline; }
   background: var(--green);
   color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
 }
 
 .note {
@@ -204,6 +214,19 @@ h2 {
   text-align: center;
   font-size: 0.9rem;
 }
+
+.warning-panel {
+  background: #fff7e8;
+  border: 1px solid #f0c36a;
+  border-left: 5px solid var(--orange);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.4rem;
+}
+.warning-panel h2 {
+  color: #7b4100;
+  border-bottom-color: #f0c36a;
+}
+.warning-panel p:last-child { margin-bottom: 0; }
 
 .preview-placeholder {
   background: var(--bg-soft);

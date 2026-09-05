@@ -2,11 +2,13 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/version-v26.1%20Validated-blue)
+![Current Version](https://img.shields.io/badge/version-V27%20In%20Testing-orange)
 
-**A single Power BI report that delivers a complete, defensible view of AI usage across your Microsoft 365 tenant — Copilot adoption, shadow AI, OAuth risk, off-hours/geo anomalies, and (optionally) MDA App Governance & Cloud Discovery — all in one PBIT.**
+**A single Power BI report that brings together source-dependent indicators for Copilot adoption, third-party AI activity, OAuth consent risk, off-hours/geo patterns, and optional Defender for Cloud Apps data.**
 
-> **v26.1 — June 23, 2026:** All KQL queries in `kql_queries_v22_E5V3.kql` have been live-tested against a real tenant. Eight bugs fixed across B2, B4, B6, and B8 (UPN resolution, schema portability between Sentinel and native Defender XDR, KQL syntax errors). B3 and B5 validated clean. See the [query pack changelog](kql_queries_v22_E5V3.kql) for details.
+> **V27 In Testing - September 4, 2026:** Visual redesign with collapsible filters, updated evidence cards, corrected month-over-month KPIs, improved benchmark spacing, actual Power BI preview images, and a new interpretation guide and walkthrough. The data model and 13-file CSV contract remain compatible with V26.
+>
+> **Stable release:** [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) remains available. The KQL query pack is still v26.1 and retains its June 2026 live-validation record.
 
 ### 📥 [Click Here to Download All Files](https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip)
 
@@ -14,7 +16,10 @@
 
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
-[![Dashboard PBIT](https://img.shields.io/badge/Report-Dashboard%20PBIT-003087)](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+[![V27 In Testing PBIT](https://img.shields.io/badge/Report-V27%20In%20Testing-orange)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
+[![Stable V26 PBIT](https://img.shields.io/badge/Report-Stable%20V26-003087)](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+[![Interpretation Guide](https://img.shields.io/badge/Guide-Interpretation-4B2D83)](INTERPRETATION_GUIDE.md)
+[![Video Walkthrough](https://img.shields.io/badge/Video-V27%20Walkthrough-8A2BE2)](media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
@@ -23,7 +28,7 @@
 [![PBIT Generator](https://img.shields.io/badge/Tool-PBIT%20Generator-red)](generate_pbit_v26_unified.py)
 
 **Additional Resources:**
-[Defender for Endpoint docs](https://learn.microsoft.com/defender-endpoint/) · [Defender for Cloud Apps docs](https://learn.microsoft.com/defender-cloud-apps/) · [Microsoft Purview Audit docs](https://learn.microsoft.com/purview/audit-solutions-overview) · [Microsoft Graph Reports API](https://learn.microsoft.com/graph/api/resources/report)
+[Defender for Endpoint docs](https://learn.microsoft.com/defender-endpoint/) · [Defender for Cloud Apps docs](https://learn.microsoft.com/defender-cloud-apps/) · [Microsoft Purview Audit docs](https://learn.microsoft.com/purview/audit-solutions-overview) · [Advanced Hunting API](https://learn.microsoft.com/graph/api/security-security-runhuntingquery)
 
 ⭐ **Star this repository** to receive notifications about new template versions
 👀 **Watch** for updates and announcements
@@ -32,11 +37,14 @@
 
 ---
 
+> [!WARNING]
+> **Experimental use and compliance notice:** V27 is **In Testing**. This template is an investigation and planning aid, not a sole source of truth for licensing, security, privacy, legal, compliance, personnel, or procurement decisions. Coverage depends on licensing, onboarding, connectors, retention, configured app/domain lists, permissions, and source availability. Risk scores and anomalies are heuristic triage signals, and file proximity is correlation - not proof of upload, disclosure, misuse, or data leakage. Customers are responsible for lawful collection, access controls, sensitivity labels, retention, and compliance. The public template does not upload customer data to this repository; customers control collection, storage, deployment, and sharing. The sample package is fabricated. See the full [usage and compliance disclaimer](INTERPRETATION_GUIDE.md#usage-and-compliance-disclaimer).
+
 ## ▶️ Report preview
 
 <div align="center"><img src="images/report-preview.gif" alt="Animated preview of all 10 AI Solutions Intelligence Dashboard pages using synthetic sample data" width="900"></div>
 
-*Illustrative carousel generated exclusively from the repository's synthetic `sample_data_v26` files. It is not a captured Power BI rendering. The preview contains aggregate sample metrics only—no tenant or employee data.*
+*Actual Power BI Desktop captures from the V27 In Testing template, loaded with the repository's deterministic synthetic sample data. No tenant or employee data is shown. The original illustrative V26 carousel is preserved in [`archive/design-reference/v26-illustrative-preview`](archive/design-reference/v26-illustrative-preview/README.md).*
 
 ---
 
@@ -48,20 +56,20 @@ Every tenant loads the **same report** from the **same 13 CSV files** — you ju
 <tr>
 <td width="33%" valign="top">
 
-### 🟢 Under ~10,000 users
+### 🟢 One-time or smaller pull
 **Manual CSV export**
 
-Copy-paste queries into the portal and click Export. A few files need one short PowerShell step.
+Best when the expected event volume fits portal export limits. Copy-paste queries into the portal and use the supplied PowerShell collectors for Graph and Purview.
 
 ➡️ **[Start Here](DATA_SETUP_START_HERE.md)** · [Full manual guide](INSTRUCTIONS_v26.md)
 
 </td>
 <td width="33%" valign="top">
 
-### 🔵 Over ~10,000 users
+### 🔵 Repeat or high-volume pull
 **Automated PAX exporter**
 
-Run our updated scripts — they page past Defender's 10,000-row cap for you.
+Use conservative adaptive time partitioning for repeatable Advanced Hunting exports. Review saturation warnings and source retention before treating an export as complete.
 
 ➡️ **[PAX Exporter](PAX_Exporter/README.md)**
 
@@ -103,7 +111,7 @@ Every CSV, click-by-click — Graph, Purview, and Defender.
 
 **3 · [Automated exporter](PAX_Exporter/README.md)**
 
-Run the PAX scripts to pull everything, past the 10K-row cap.
+Run the PAX scripts to produce all 13 files with conservative partitioning.
 
 </td>
 </tr>
@@ -139,13 +147,13 @@ Read-only permissions, data handling, and licensing notes.
 
 <br>
 
-This dashboard replaces fragmented, surface-level AI adoption reports with a single, unified view that spans Copilot usage, shadow AI detection, OAuth risk scoring, behavioral anomalies, and (optionally) Microsoft Defender for Cloud Apps signals. The same PBIT loads on every tier; visuals remain empty when their required source table is unavailable.
+This dashboard brings several source-dependent indicators into one view: Copilot audit activity, catalog-classified third-party AI, OAuth consent risk, behavioral signals, and optional Microsoft Defender for Cloud Apps data. The same PBIT loads on every tier; visuals remain empty when their required source table is unavailable.
 
 **Executive Overview:**
 Track total AI users, adoption rate, license utilization, top tools, and monthly trends at a glance. Identify the gap between licensed capacity and actual usage with KPI cards that surface workforce adoption, per-surface Copilot prompt counts (Teams, Word, Excel, Outlook, PowerPoint, Chat), and department-level activity breakdowns.
 
 **AI Adoption Strategy:**
-Detect shadow AI usage across unsanctioned tools, assess behavioral risk through file-proximity analysis and off-hours/geo anomalies, and review OAuth consent patterns with permission-weighted risk scores. Coverage is source-specific: MDE Plan 2 supplies device-event signals, Entra supplies sign-ins, Purview supplies Copilot interactions, and Defender for Cloud Apps supplies `CloudAppEvents`, App Governance, and Cloud Discovery.
+Prioritize review of observed third-party AI, file-proximity correlations, off-hours/geo patterns, and OAuth consent events. These are heuristic triage indicators with possible false positives and false negatives. Coverage is source-specific: MDE Plan 2 supplies device-event signals, Entra supplies sign-ins, Purview supplies Copilot interactions, and Defender for Cloud Apps supplies `CloudAppEvents`, App Governance, and Cloud Discovery.
 
 **Solution Priority:**
 Prioritize AI tool governance with the solutions catalog (Sanctioned / Conditional / Unsanctioned tiers), benchmark adoption against configurable targets, and use the tier comparison matrix to understand which pages and signals map to your available data sources.
@@ -170,35 +178,39 @@ The dashboard includes **10** interactive report pages organized into core analy
 
 KPI cards showing total AI users, adoption rate, top tools, and monthly trends. Includes workforce adoption donut, license utilization gauge, gap-to-target indicators, Copilot adoption percentage, and executive narrative verdicts. Works on E3 + Copilot baseline tier.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Executive Summary page](images/v27-report-pages/01-executive-summary.png)](images/v27-report-pages/01-executive-summary.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 2. Copilot Deep Dive
 
-Dynamic Copilot prompt breakdowns for every surface observed by Purview Audit, including Teams, Word, Excel, Outlook, PowerPoint, Chat, Loop, OneNote, SharePoint, Edge, and future workloads. Requires `ai_copilot_usage_graph.csv` and `ai_copilot_surface_usage.csv`.
+Dynamic, audit-event-derived Copilot activity breakdowns for every surface observed by Purview Audit, including Teams, Word, Excel, Outlook, PowerPoint, Chat, Loop, OneNote, SharePoint, Edge, and future workloads. These directional metrics can differ from the official Microsoft 365 Copilot usage report. Requires `ai_copilot_usage_graph.csv` and `ai_copilot_surface_usage.csv`.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Copilot Deep Dive page](images/v27-report-pages/02-copilot-deep-dive.png)](images/v27-report-pages/02-copilot-deep-dive.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 3. Behavioral Risk
 
-Per-user risk scoring with file-proximity analysis (files accessed within 5 minutes of AI site visits), off-hours session percentages, geo anomaly counts, and composite AI Risk Score. OAuth consent patterns use Graph audit data. File proximity requires MDE Plan 2; off-hours analysis requires `EntraIdSignInEvents`.
+Per-user triage scoring with file-proximity analysis (selected file create/modify/rename/copy events shortly after an observed AI-domain connection), off-hours percentages, geo anomaly counts, and a composite AI Risk Score. Temporal proximity does not prove upload, disclosure, or causation. OAuth consent patterns use Graph audit data. File proximity requires MDE Plan 2; off-hours analysis requires Microsoft Entra ID P2 and retained `EntraIdSignInEvents` data.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Behavioral Risk page](images/v27-report-pages/03-behavioral-risk.png)](images/v27-report-pages/03-behavioral-risk.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 4. Shadow AI
 
-Unmanaged AI detection showing unsanctioned tool usage, non-Microsoft AI activity, percentage of users on unmanaged tools, and tool sprawl metrics. This page is populated by `CloudAppEvents` and therefore requires Defender for Cloud Apps; the MDE-only file-proximity and client-channel exports do not populate it.
+Observed third-party AI indicators showing catalog-classified tools, estimated non-Microsoft activity, percentage of users on tools classified as unmanaged, and tool-sprawl metrics. Classifications come from the local solutions catalog, and activity estimates are not vendor prompt logs. This page is populated by `CloudAppEvents` and therefore requires Defender for Cloud Apps; the MDE-only file-proximity and client-channel exports do not populate it.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Shadow AI page](images/v27-report-pages/04-shadow-ai.png)](images/v27-report-pages/04-shadow-ai.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
@@ -206,8 +218,9 @@ Unmanaged AI detection showing unsanctioned tool usage, non-Microsoft AI activit
 
 Bubble chart plotting weekly days used vs. weekly actions per user (capped at 7), with tool and department slicers for drill-down. Visualizes adoption intensity across organizational units.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Department Intensity page](images/v27-report-pages/05-dept-intensity.png)](images/v27-report-pages/05-dept-intensity.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
@@ -215,26 +228,29 @@ Bubble chart plotting weekly days used vs. weekly actions per user (capped at 7)
 
 Department-level activity tables with per-AI-solution breakdowns, weekly trend filtering, and cross-department comparison metrics.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Department Breakdown page](images/v27-report-pages/06-department-breakdown.png)](images/v27-report-pages/06-department-breakdown.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 7. Shadow AI Catalog (MDA)
 
-Cloud Discovery shadow AI catalog with risk-scored domains, traffic volumes (upload/download), transaction counts, and sanction status. **Requires Microsoft Defender for Cloud Apps** — displays a yellow "MDA Required" callout when MDA data is not available.
+Cloud Discovery and App Governance view with source alert severity, catalog-classified domains, traffic volumes, and sanction status. Upload volume is a traffic signal; it does not identify content or prove exfiltration. **Requires Microsoft Defender for Cloud Apps** and the relevant connectors/exports.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Shadow AI and App Governance Data page](images/v27-report-pages/07-shadow-ai-catalog.png)](images/v27-report-pages/07-shadow-ai-catalog.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 8. Benchmarks & Targets
 
-Interactive what-if parameter sliders for Copilot adoption target, workforce AI adoption target, license utilization target, unmanaged AI threshold, and logins-without-CA threshold. Gap-to-target indicators, months-to-target projection, and scorecard status cards.
+Interactive what-if parameters for locally selected adoption, utilization, unmanaged-AI, and logins-without-CA targets. Targets are organizational assumptions, not Microsoft benchmarks. "Without CA" means the Entra record reports Conditional Access as not applied; it does not prove that every other protection was absent.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Benchmarks and Targets page](images/v27-report-pages/08-benchmarks-targets.png)](images/v27-report-pages/08-benchmarks-targets.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
@@ -242,17 +258,19 @@ Interactive what-if parameter sliders for Copilot adoption target, workforce AI 
 
 Consolidated reference page with plain-language definitions for every adoption, risk, and shadow AI metric, plus a data dictionary describing each source table and CSV. A static reference page that works on every license tier with no data dependency.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Glossary and Data Dictionary page](images/v27-report-pages/09-glossary-data-dictionary.png)](images/v27-report-pages/09-glossary-data-dictionary.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 ---
 
 ### 10. Tier Comparison
 
-Coverage matrix mapping each report page to its required license level (E3+Copilot → E5/MDE P2 → MDA). Self-service tier identification — which pages have data vs. empty visuals tells you exactly where your tenant stands.
+Planning matrix mapping report capabilities to product and data-source combinations. Product ownership alone does not guarantee data; onboarding, connector selection, permissions, regional availability, policy configuration, and retention also matter.
 
-*Screenshot coming soon*
-*Click image to enlarge*
+[![Data Coverage by License and Source page](images/v27-report-pages/10-tier-comparison.png)](images/v27-report-pages/10-tier-comparison.png)
+
+*Actual V27 In Testing Power BI capture with synthetic sample data. Click to enlarge.*
 
 </details>
 
@@ -282,17 +300,30 @@ to collect the required data:
    - User.Read.All, LicenseAssignment.Read.All, AuditLog.Read.All,
      ThreatHunting.Read.All
 
-2. Microsoft Entra admin centre: Reports Reader + Security Reader role
+2. App registration and consent:
+   - Add the four permissions above as Microsoft Graph Application permissions.
+   - A Privileged Role Administrator or Global Administrator must grant tenant-wide
+     admin consent for application permissions.
 
-3. Microsoft Purview portal: Audit Reader or eDiscovery Manager role
+3. Microsoft Purview / Exchange Online audit:
+   - View-Only Audit Logs (read/export) or Audit Logs for Search-UnifiedAuditLog.
+   - Purview Audit Reader or Audit Manager for portal search/export.
+   - eDiscovery roles alone do not satisfy this prerequisite.
 
-4. Microsoft Defender XDR: Security Reader (Advanced Hunting access)
+4. Microsoft Defender XDR:
+   - ThreatHunting.Read.All for the automated Graph query.
+   - Security Reader, Global Reader, or an assigned Defender XDR Unified RBAC
+     hunting role for interactive portal use.
 
-5. Defender for Cloud Apps: Cloud App Security Reader when collecting
-   CloudAppEvents, App Governance, or Cloud Discovery data
+5. Product and data prerequisites:
+   - Microsoft Entra ID P2 for EntraIdSignInEvents.
+   - Microsoft Defender for Endpoint Plan 2 for device-event tables.
+   - Microsoft Defender for Cloud Apps plus the Microsoft 365 activities connector
+     for CloudAppEvents; Security Reader or Global Reader for read-only portal use.
 
-The dashboard uses read-only access to generate CSV exports.
-No write permissions are required.
+The collectors use read-only data APIs. Initial product activation, connector,
+uploader, tenant-setting, or Conditional Access configuration can still require
+separate administrative write operations.
 
 Setup instructions:
 https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard
@@ -317,7 +348,12 @@ The dashboard expects 13 CSV filenames. Populate each source available in your t
 
 #### Path A — Setup without MDA (M365 E3/E5 + MDE Plan 2)
 
-Collect the available baseline CSVs using Microsoft Graph, Purview Audit, and Defender Advanced Hunting, then create header-only files for unavailable sources. `CloudAppEvents` requires Defender for Cloud Apps, so no-MDA tenants must also stub `ai_activity_sessions.csv`.
+Collect the available baseline CSVs using Microsoft Graph, Purview Audit, and
+Defender Advanced Hunting, then create header-only files for unavailable
+sources. `CloudAppEvents` requires Defender for Cloud Apps, so no-MDA tenants
+should run `Invoke-AISolutionsExport.ps1` with `-SkipActivitySessions`; the
+script creates the exact `ai_activity_sessions.csv` stub and continues with the
+other three hunting presets.
 
 <details>
 <summary><strong>Detailed step-by-step guide</strong></summary>
@@ -384,8 +420,8 @@ Complete all 10 baseline CSVs from Path A, then populate these 3 additional file
 
 **Prerequisites for Path B:**
 
-- Microsoft Defender for Cloud Apps service activated (sign in to https://security.microsoft.com with Global Admin)
-- App Governance enabled and 24-hour ML baseline warmup completed
+- Microsoft Defender for Cloud Apps licensing and tenant configuration enabled by an authorized administrator
+- App Governance enabled in a supported region; allow up to 10 hours for initial data
 - Cloud Discovery log uploader configured (or MDE integration enabled for auto-discovery)
 - Conditional Access App Control policies configured for your AI apps (e.g., ChatGPT Enterprise, Microsoft 365 Copilot)
 
@@ -407,18 +443,23 @@ Ensure you have the required software, roles, and (optionally) Defender services
 #### Option A: Software Requirements
 
 - [Power BI Desktop](https://www.microsoft.com/en-us/download/details.aspx?id=58494) (latest version)
-- PowerShell 7+ with the [Microsoft.Graph](https://learn.microsoft.com/powershell/microsoftgraph/installation) and [ExchangeOnlineManagement](https://learn.microsoft.com/powershell/exchange/exchange-online-powershell-v2) modules
-- One folder for all CSVs, e.g. `C:\AI_Usage_Data\` (Windows) or `~/AI_Usage_Data/` (macOS)
+- PowerShell 7+ with [ExchangeOnlineManagement](https://learn.microsoft.com/powershell/exchange/exchange-online-powershell-v2); the [Microsoft.Graph](https://learn.microsoft.com/powershell/microsoftgraph/installation) module is needed only for the manual Graph PowerShell examples
+- One Windows folder for all CSVs, e.g. `C:\AI_Usage_Data\`
+- Power BI Desktop is a Windows application. macOS users need a supported Windows environment or a separately published Power BI Service artifact.
 
 #### Option B: Roles & Portal Permissions
 
 | Portal | Minimum Role | Used For |
 |---|---|---|
-| Microsoft Entra admin centre | Reports Reader + Security Reader | EntraUsers, Sign-Ins, Audit Logs |
-| Microsoft Purview portal | Audit Reader / eDiscovery Manager | Copilot prompts (`CopilotInteraction`) |
-| Microsoft Defender XDR | Security Reader | Advanced Hunting queries |
-| Defender for Cloud Apps (MDA) | Cloud App Security Reader | App Governance, Cloud Discovery |
-| Microsoft Graph | `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`, `ThreatHunting.Read.All` | Entra users and licenses, OAuth, sign-ins, Defender hunting |
+| Microsoft Graph application | `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`, `ThreatHunting.Read.All` | Automated users/licenses, OAuth, sign-ins, and Defender hunting |
+| Admin-consent owner | Privileged Role Administrator or Global Administrator | Tenant-wide consent for Graph application permissions |
+| Exchange Online audit | View-Only Audit Logs or Audit Logs | `Search-UnifiedAuditLog` Copilot collection |
+| Microsoft Purview portal | Audit Reader or Audit Manager | Portal audit search and export |
+| Microsoft Defender XDR portal | Security Reader, Global Reader, or assigned Unified RBAC hunting access | Interactive Advanced Hunting |
+| Defender for Cloud Apps | Security Reader or Global Reader | App Governance and Cloud Discovery read access |
+| Power BI workspace | Contributor, Member, or Admin | Publish a PBIX to an existing workspace |
+| Power BI app | Member or Admin | Publish or update a workspace app |
+| On-premises data gateway | Gateway administrator or authorized connection creator | Configure a refreshable local/UNC Folder source |
 
 ---
 
@@ -443,11 +484,10 @@ Required for the Behavioral Risk and Shadow AI pages.
 
 <br>
 
-1. Download [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+1. Download [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit). Use [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) when you need the stable release.
 2. Double-click the file → Power BI Desktop opens
 3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
    - Windows: `C:\AI_Usage_Data`
-   - macOS: `/Users/yourname/AI_Usage_Data`
 4. Click **Load** → wait 1–3 minutes for refresh
 5. **File → Save As** → save as `.pbix` with a descriptive name (e.g. `AI_Solutions_<TenantName>_<YYYY-MM-DD>.pbix`)
 
@@ -486,7 +526,10 @@ Required for the Behavioral Risk and Shadow AI pages.
 <summary><strong>Publish / Distribute</strong></summary>
 
 1. Publish the `.pbix` to Power BI Service via **Home → Publish**
-2. Configure scheduled refresh against OneDrive / SharePoint hosting the CSVs
+2. Configure the data source correctly:
+   - Keep the local/UNC Folder source and configure an on-premises data gateway, or
+   - Redesign the Power Query source to use the SharePoint/OneDrive connector and configure its credentials before publishing
+   - Publishing alone does not make a local `C:\AI_Usage_Data` folder refreshable in the service
 3. Share the workspace or create an app for stakeholders
 4. Consider row-level security if department-scoped access is needed
 
@@ -508,13 +551,28 @@ Required for the Behavioral Risk and Shadow AI pages.
 1. Re-run the data collection queries on your preferred cadence (weekly is typical)
 2. Overwrite the CSVs in your data folder with the new exports
 3. In Power BI Desktop: **Home → Refresh** → Save
-4. (Or publish to Power BI Service and configure scheduled refresh against OneDrive / SharePoint hosting the CSVs)
+4. For Power BI Service refresh, either configure an on-premises gateway for the local/UNC Folder source or redesign the queries to use a SharePoint/OneDrive connector before publishing.
 
 When upgrading from No-MDA to Full MDA later: overwrite the 3 stub CSVs with real exports, refresh the report — MDA pages light up automatically. **No PBIT change needed.**
 
 </details>
 
 </details>
+
+---
+
+## Data protection
+
+Generated CSVs and PBIX files can contain user identifiers, IP addresses,
+locations, user agents, and resource names. The public PBIT removes user-specific
+security bindings and MSIP sensitivity-label metadata so it can be distributed
+publicly; customer exports and derived reports are **not** automatically labeled,
+encrypted, or access-controlled. Apply your organization's sensitivity label,
+storage controls, retention policy, and least-access rules before sharing.
+
+Power BI Desktop use is free. Publishing and sharing require the appropriate
+Power BI Pro, Premium Per User, or qualifying capacity arrangement; PPU workspace
+content requires PPU access for consumers.
 
 ---
 

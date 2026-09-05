@@ -1,6 +1,6 @@
 # Quickstart — your first export, step by step
 
-This is the long-form version of the [README Quickstart](../README.md#quickstart-5-minutes). It assumes nothing and walks you through a full first run.
+This is the long-form version of the [README step-by-step workflow](../README.md#run-it--step-by-step). It assumes nothing and walks you through a full first run.
 
 ---
 
@@ -14,7 +14,14 @@ $PSVersionTable.PSVersion
 
 You need `Major` to be `7` or higher. If it isn't, install [PowerShell 7+](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) first.
 
-**Graph permissions.** A full 13-file export requires **`ThreatHunting.Read.All`**, **`User.Read.All`**, **`LicenseAssignment.Read.All`**, and **`AuditLog.Read.All`**, all admin-consented. You also need an account that can run Microsoft Purview audit search through `Search-UnifiedAuditLog`. If you don't have these yet, see [authentication.md](authentication.md).
+**Graph permissions.** A full 13-file export requires
+**`ThreatHunting.Read.All`**, **`User.Read.All`**,
+**`LicenseAssignment.Read.All`**, and **`AuditLog.Read.All`**, all
+admin-consented. The documented app-only path uses Application permissions, whose
+tenant-wide consent must be granted by a Privileged Role Administrator or Global
+Administrator. The interactive Purview collector also needs **View-Only Audit
+Logs** or **Audit Logs** for `Search-UnifiedAuditLog`. If you don't have these
+yet, see [authentication.md](authentication.md).
 
 ---
 
@@ -70,6 +77,11 @@ $secret = Read-Host -AsSecureString 'Client secret'
 .\Invoke-AISolutionsExport.ps1 -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data' -TenantId '<TENANT_ID>' -ClientId '<CLIENT_ID>' -ClientSecret $secret -IncludeSectionA
 ```
 
+If the tenant does not have Defender for Cloud Apps or `CloudAppEvents`, add
+`-SkipActivitySessions` to either command. This writes the required
+header-only activity file and continues with the other Advanced Hunting
+presets.
+
 | Placeholder | What to put there |
 |---|---|
 | `<START_DATE>` | Start of your date window, e.g. `2026-01-01` |
@@ -89,12 +101,15 @@ As it runs you'll see colored status lines:
 
 | Line | Meaning |
 | --- | --- |
-| `[ACCEPT] ... : N rows` | This window returned under the cap and its rows were kept. |
-| `[SUBDIVIDE] ... split into K` | This window hit the cap and was split into smaller windows. |
+| `[ACCEPT] ... : N rows` | This window returned under the configured local threshold and its rows were kept. |
+| `[SUBDIVIDE] ... split into K` | This window reached the local threshold and was split into smaller windows. |
 | `[RETRY] HTTP 429 ...` | The API throttled; the tool is waiting and will retry automatically. |
 | `[SMART SUBDIVISION] ...` | The tool measured data density and chose a split factor. |
 
-This is normal. Subdivision means the tool is doing its job — getting past the 10,000-row cap.
+This is normal. The default 10,000-row value is a conservative local partition
+threshold, below the currently documented service result quota. Current Advanced
+Hunting limits also include a 64-MB result-size ceiling, so review any
+completeness warning.
 
 ---
 
@@ -106,7 +121,9 @@ When it finishes, count the rows in your CSV (the `-1` drops the header):
 (Import-Csv '<OUTPUT.csv>').Count
 ```
 
-Sanity check: if any single window warned that it "still returned >= RowCap" at the 1-minute floor, your data is extremely dense in that minute and may be truncated there — see [troubleshooting.md](troubleshooting.md).
+Sanity check: if any single window warned that it "still returned >= RowCap" at
+the 1-minute floor, review that period for completeness and consider a more
+selective query - see [troubleshooting.md](troubleshooting.md).
 
 ---
 
@@ -118,7 +135,7 @@ The file is UTF-8 with a header row. Open it in Excel, import it into your dashb
 Import-Csv '<OUTPUT.csv>' | Select-Object -First 5 | Format-Table
 ```
 
-> **Handle with care.** This file contains sensitive audit data (user identifiers, IPs, and more). Review the [Sensitive Data Warning](../README.md#️-sensitive-data-warning) before sharing or storing it.
+> **Handle with care.** This file contains sensitive audit data (user identifiers, IPs, and more). Review the [Sensitive Data Warning](../README.md#sensitive-data-warning) before sharing or storing it.
 
 ---
 

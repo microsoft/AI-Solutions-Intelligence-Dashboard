@@ -16,8 +16,8 @@ By the end you'll have **13 CSV files** in one folder and an open Power BI repor
 
 There are two ways to collect the data. Both produce the **same 13 CSV files** and open the **same** report. Pick **one** option below and follow it from top to bottom — every step you need is inside that option, so you never have to jump back and forth.
 
-- **Option 1 — Manual (copy & paste)** — best for organizations under ~10,000 users or a one-time pull. Mostly copy-paste from the Defender portal; a few files need PowerShell.
-- **Option 2 — Automated exporter (run a script)** — best for 10,000+ users or repeat pulls. A little scripting; handles Defender's 10,000-row limit for you.
+- **Option 1 — Manual (copy & paste)** — best for a one-time pull when the expected event volume fits the portal export limits. Mostly copy-paste from the Defender portal; a few files need PowerShell.
+- **Option 2 — Automated exporter (run a script)** — best for repeat or high-volume pulls. It conservatively partitions Advanced Hunting queries into smaller time windows and surfaces saturation warnings.
 
 > Not sure? Pick Option 1.
 
@@ -98,7 +98,7 @@ winget install --id Microsoft.PowerShell --source winget
 ```
 
 **Option C — Download the installer:**
-1. Go to the official install page: https://aka.ms/powershell-release?tag=stable
+1. Go to the official [PowerShell installation guide](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
 2. Download the **Windows x64 .msi** installer.
 3. Double-click it and click **Next** through the wizard.
 
@@ -112,9 +112,12 @@ winget install --id Microsoft.PowerShell --source winget
 
 > From here on, always use the **PowerShell 7** window (the one you just opened), not the older blue "Windows PowerShell".
 
-**One more install — the Microsoft Graph module**
+**Optional install — the Microsoft Graph module**
 
-The Step 5 commands use `Connect-MgGraph` and `Get-MgUser`, which come from a free Microsoft module that is **not** included with PowerShell itself. In your **PowerShell 7** window, paste this and press Enter:
+The supplied `Collect-AISolutionsGraph.ps1` script uses Microsoft Graph REST and
+does not require the Microsoft.Graph PowerShell module. Install the module only
+if you plan to follow the manual `Connect-MgGraph` / `Get-MgUser` example in
+`INSTRUCTIONS_v26.md`:
 ```powershell
 Install-Module Microsoft.Graph -Scope CurrentUser
 ```
@@ -131,7 +134,7 @@ Use `Collect-AISolutionsGraph.ps1` for Entra users, license SKU names, app conse
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click the report template: **AI-Solutions-Intelligence-Dashboard V26 Validated.pbit** (in this folder).
+2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**. Use **V26 Validated** when you need the stable release.
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 1, for example:
    ```
    C:\AI_Usage_Data
@@ -144,7 +147,7 @@ Use `Collect-AISolutionsGraph.ps1` for Entra users, license SKU names, app conse
 
 ## Option 2 — Automated (step by step)
 
-Follow these steps in order. This path runs scripts that pull everything for you, including automatically handling Defender's 10,000-row limit. Full detail is in [PAX_Exporter/README.md](PAX_Exporter/README.md).
+Follow these steps in order. This path runs scripts that produce the 13-file contract and conservatively partition Advanced Hunting requests. Current service quotas include result-count and result-size limits, so review any saturation warning before treating an export as complete. Full detail is in [PAX_Exporter/README.md](PAX_Exporter/README.md).
 
 ### Step 1 — Install PowerShell 7
 
@@ -161,7 +164,7 @@ winget install --id Microsoft.PowerShell --source winget
 ```
 
 **Option C — Download the installer:**
-1. Go to the official install page: https://aka.ms/powershell-release?tag=stable
+1. Go to the official [PowerShell installation guide](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).
 2. Download the **Windows x64 .msi** installer.
 3. Double-click it and click **Next** through the wizard.
 
@@ -188,7 +191,14 @@ The scripts sign in to Microsoft Graph and need these permissions **granted and 
 - `ThreatHunting.Read.All` (for the Defender data)
 - `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All` (for the Graph data)
 
-> If a run stops with **HTTP 403**, it means these permissions haven't been granted yet — send the list above to your IT/security admin and ask them to consent.
+These are **Application permissions** for the documented app-only path. A
+Privileged Role Administrator or Global Administrator must grant tenant-wide
+admin consent. The interactive Copilot collector separately requires
+`Search-UnifiedAuditLog` access: **View-Only Audit Logs** or **Audit Logs** in
+Exchange Online. Purview portal search/export uses **Audit Reader** or **Audit
+Manager**; eDiscovery roles alone are not sufficient.
+
+> If a run stops with **HTTP 403**, verify both the app permission and admin-consent status. A 403 in the Purview step can instead mean the signed-in collector does not have the audit-log role.
 
 ### Step 4 — Sign in and get an access token
 The most reliable option for repeat runs is an **app registration** (your admin creates one and gives you a Tenant ID, Client ID, and Client Secret). See [PAX_Exporter/docs/authentication.md](PAX_Exporter/docs/authentication.md) for both options explained simply.
@@ -211,6 +221,11 @@ cd "C:\Users\YourName\Downloads\AI-Solutions-Intelligence-Dashboard\PAX_Exporter
 .\Invoke-AISolutionsExport.ps1 -TenantId <TENANT_ID> -ClientId <CLIENT_ID> -ClientSecret (Read-Host -AsSecureString 'Client secret') -StartDate '<START_DATE>' -EndDate '<END_DATE>' -OutputDirectory 'C:\AI_Usage_Data'
 ```
 
+If Defender for Cloud Apps or `CloudAppEvents` is unavailable, add
+`-SkipActivitySessions` to that command. The script then creates the exact
+header-only `ai_activity_sessions.csv` and continues with the other three
+Advanced Hunting exports.
+
 ```powershell
 .\Collect-AISolutionsGraph.ps1 -TenantId <TENANT_ID> -ClientId <CLIENT_ID> -ClientSecret (Read-Host -AsSecureString 'Client secret') -OutputDirectory 'C:\AI_Usage_Data'
 ```
@@ -219,14 +234,19 @@ cd "C:\Users\YourName\Downloads\AI-Solutions-Intelligence-Dashboard\PAX_Exporter
 Connect-ExchangeOnline; .\Collect-AICopilotUsage.ps1 -OutputDirectory 'C:\AI_Usage_Data'
 ```
 
-The first script writes four Defender-based files and three MDA placeholders. It fails loudly if a required Advanced Hunting table is unavailable; `CloudAppEvents` specifically requires Defender for Cloud Apps. The second and third scripts write the Microsoft Graph and Purview files. Use the exact header-only stubs in [INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) for unavailable sources.
+The first script writes four Defender-based files and three MDA placeholders.
+With `-SkipActivitySessions`, one of those four is an exact header-only file and
+the other three are queried normally. It fails loudly if any non-skipped
+Advanced Hunting table is unavailable. The second and third scripts write the
+Microsoft Graph and Purview files. Use the exact header-only stubs in
+[INSTRUCTIONS_v26.md](INSTRUCTIONS_v26.md) for other unavailable sources.
 
 > **Never type your secret or token directly into a file.** The `Read-Host -AsSecureString` prompt above keeps it out of scripts and logs.
 
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click the report template: **AI-Solutions-Intelligence-Dashboard V26 Validated.pbit** (in this folder).
+2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**. Use **V26 Validated** when you need the stable release.
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 2, for example:
    ```
    C:\AI_Usage_Data
@@ -246,6 +266,27 @@ The first script writes four Defender-based files and three MDA placeholders. It
 | "No results found in the specified time frame" | Query ran fine, no matching activity | Save the exact header-only file |
 | **HTTP 403** when running a script | Missing admin-consented permissions | Send the Option 2 → Step 3 permission list to your admin |
 | Report can't find files | Wrong folder path or missing CSV | Confirm the folder and CSV filename shown in the error |
+
+---
+
+## Before you interpret or share results
+
+- `ai_offhours_geo.csv` requires Microsoft Entra ID P2, Advanced Hunting access,
+  and retained `EntraIdSignInEvents` data.
+- `CloudAppEvents` requires Defender for Cloud Apps data and the Microsoft 365
+  activities connector; MDE Plan 2 alone does not provide it.
+- Copilot values derived from Purview audit logs are directional and can differ
+  from the official Microsoft 365 Copilot usage report.
+- Risk scores, geo anomalies, file proximity, and estimated prompts are triage
+  signals, not proof of misuse, disclosure, or data leakage.
+- Exported CSVs and derived reports are not automatically labeled or encrypted.
+  Apply your organization's access, retention, and sensitivity controls.
+- For Power BI Service refresh, a local/UNC Folder source requires an on-premises
+  gateway. Publishing does not convert `C:\AI_Usage_Data` into a
+  SharePoint/OneDrive connector.
+
+Read the complete [V27 interpretation and compliance guide](INTERPRETATION_GUIDE.md)
+before operational use.
 
 ---
 

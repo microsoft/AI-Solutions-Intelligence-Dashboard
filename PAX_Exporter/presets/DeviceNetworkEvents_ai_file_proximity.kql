@@ -29,7 +29,8 @@
 //
 // NOTE: this preset correlates at event grain with no per-user monthly
 // aggregation, so it carries NO user-filter token and is EXEMPT from user-hash
-// bucketing. Adaptive time-slicing keeps each window under the 10,000-row cap.
+// bucketing. Adaptive time-slicing keeps each window under a conservative
+// 10,000-row local partition threshold.
 //
 // ===========================================================================
 // EDIT HERE - the list of AI websites to collect (customer-configurable)
@@ -99,7 +100,7 @@ let FileAccess =
     | where FileName !endswith ".tmp" and FileName !endswith ".log"
     | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
               InitiatingProcessAccountUpn;
-// Step 3: Join — files accessed within 5 minutes of AI visit
+// Step 3: Join - selected file events within 5 minutes of an AI-domain connection
 AIVisits
 | join kind=inner FileAccess on DeviceId
 | where FileTimestamp between (AITimestamp .. (AITimestamp + 5m))

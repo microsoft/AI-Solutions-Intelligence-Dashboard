@@ -21,7 +21,11 @@ An access token is a short-lived string that says "Graph, let me in." It's the f
 - From the Azure CLI, or
 - From any existing tool in your environment that already mints Graph tokens.
 
-For the full 13-file export, the identity behind the token must hold all four Graph permissions listed above. It also needs an interactive Exchange Online/Purview session for Copilot audit data:
+For the full 13-file export, the delegated token must contain all four Graph
+permissions listed above, and the signed-in user must have a supported Entra or
+Defender read role for the requested data. Tenant admin consent is required. The
+Copilot collector separately needs an interactive Exchange Online session whose
+user has **View-Only Audit Logs** or **Audit Logs**:
 
 ```powershell
 Connect-ExchangeOnline
@@ -48,7 +52,7 @@ An app registration is a reusable identity for unattended runs. Set it up once, 
 
 1. **Register an app** in the Microsoft Entra admin center → *App registrations* → *New registration*. Give it a name; leave redirect URI blank.
 2. **Add the permissions:** in the app's *API permissions* → *Add a permission* → *Microsoft Graph* → **Application permissions** → add `ThreatHunting.Read.All`, `User.Read.All`, `LicenseAssignment.Read.All`, and `AuditLog.Read.All`.
-3. **Grant admin consent** for all four permissions (a tenant admin must click *Grant admin consent*). Every status must show a green check.
+3. **Grant admin consent** for all four permissions. For Microsoft Graph application permissions, a **Privileged Role Administrator** or **Global Administrator** must grant tenant-wide consent. Every status must show a green check.
 4. **Create a client secret:** *Certificates & secrets* → *New client secret* → copy the **Value** immediately (you can't see it again).
 5. **Note three values:** the **Directory (tenant) ID**, the **Application (client) ID**, and the **secret value**.
 
@@ -60,7 +64,11 @@ An app registration is a reusable identity for unattended runs. Set it up once, 
 Connect-ExchangeOnline
 ```
 
-The interactive session is separate from the Graph app credentials and is required by `Search-UnifiedAuditLog`.
+The interactive session is separate from the Graph app credentials and is
+required by `Search-UnifiedAuditLog`. Assign its user **View-Only Audit Logs**
+(read/export) or **Audit Logs** in Exchange Online. Purview **Audit Reader** or
+**Audit Manager** supports portal search/export, but eDiscovery roles alone do not
+satisfy the cmdlet prerequisite.
 
 **Command 1** — prompts you to type your secret (nothing appears on screen as you type, that's normal):
 ```powershell
@@ -81,6 +89,11 @@ $secret = Read-Host -AsSecureString 'Client secret'
 | `$secret` | Already set by Command 1 — do not replace this |
 
 `Read-Host -AsSecureString` keeps the secret out of your command history and off the screen. The tool acquires a token behind the scenes and never logs the secret or the token.
+
+For a tenant without Defender for Cloud Apps or `CloudAppEvents`, add
+`-SkipActivitySessions` to the export command. The other three Advanced
+Hunting presets still run and the required activity file is created with its
+exact header.
 
 ---
 

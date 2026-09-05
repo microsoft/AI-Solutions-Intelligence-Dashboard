@@ -1,4 +1,4 @@
-# AI Solutions Intelligence Dashboard v26.1 — Setup Instructions
+# AI Solutions Intelligence Dashboard v26.1 / V27 In Testing - Setup Instructions
 
 **One report. Two paths.** Choose the path that matches your tenant.
 
@@ -22,7 +22,7 @@ The PBIT is identical for both paths — the difference is just what's in the da
 | 1.4 | `ai_oauth_consents.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
 | 1.5 | `ai_sso_signins.csv` | 💻 PowerShell (Microsoft Graph) | AuditLog.Read.All |
 | **1.6** | **`ai_file_proximity.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
-| **1.7** | **`ai_offhours_geo.csv`** | **🔍 Defender Advanced Hunting** | **`EntraIdSignInEvents`** |
+| **1.7** | **`ai_offhours_geo.csv`** | **🔍 Defender Advanced Hunting** | **Entra ID P2 + `EntraIdSignInEvents`** |
 | 1.8 | `ai_solutions_catalog.csv` | 📋 Excel / text editor | — |
 | **1.9** | **`ai_client_channel.csv`** | **🔍 Defender Advanced Hunting** | **MDE Plan 2** |
 | **3.1** | **`ai_appgov_alerts.csv`** | **🔍 Defender Advanced Hunting** | **MDA App Governance** |
@@ -41,16 +41,40 @@ The PBIT is identical for both paths — the difference is just what's in the da
 
 ## Step 0 — Prerequisites
 
-- Power BI Desktop (latest)
-- One folder for all CSVs, e.g. `C:\AI_Usage_Data\` (Windows) or `~/AI_Usage_Data/` (Mac)
-- The PBIT file: [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+- Power BI Desktop (latest supported Windows release)
+- One Windows folder for all CSVs, e.g. `C:\AI_Usage_Data\`
+- The current testing PBIT: [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
+- The stable PBIT: [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
 - The KQL pack: [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql)
 
 Permissions you will need over the course of setup:
-- Microsoft Graph: `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`
-- Microsoft Defender XDR: Advanced Hunting access (Security Reader minimum)
-- Microsoft Purview: eDiscovery / Audit reader (or use PowerShell `Search-UnifiedAuditLog`)
-- Defender for Cloud Apps (Path B only): Reader on the MDA portal + App Governance reader
+- Microsoft Graph application permissions for the automated exporter: `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`, `ThreatHunting.Read.All`
+- Tenant-wide Graph application-permission consent: Privileged Role Administrator or Global Administrator
+- Microsoft Defender XDR portal: Security Reader, Global Reader, or assigned Defender XDR Unified RBAC hunting access
+- Exchange Online audit cmdlet: View-Only Audit Logs or Audit Logs for `Search-UnifiedAuditLog`
+- Microsoft Purview portal: Audit Reader or Audit Manager for audit search/export; eDiscovery roles alone are not sufficient
+- Defender for Cloud Apps (Path B only): Security Reader or Global Reader for read-only portal access
+
+### Access matrix
+
+| Collector operation | Minimal permission | Interactive/consent role | Product or data dependency |
+|---|---|---|---|
+| Graph `/users` | `User.Read.All` | Privileged Role Administrator or Global Administrator grants application-permission consent | Microsoft Entra directory |
+| Graph `/subscribedSkus` | `LicenseAssignment.Read.All` | Same application-permission consent owner; delegated calls require Directory Readers or Global Reader | Tenant subscription data |
+| Graph `/auditLogs/directoryAudits` | `AuditLog.Read.All` | Same consent owner; delegated calls require Reports Reader, Security Reader, or Security Administrator | Entra audit retention |
+| Graph `/auditLogs/signIns` | `AuditLog.Read.All` | Same consent owner; delegated calls require Global Reader, Reports Reader, Security Reader, Security Operator, or Security Administrator | Entra sign-in retention |
+| Graph `/security/runHuntingQuery` | `ThreatHunting.Read.All` | Same consent owner; interactive portal access requires Security Reader, Global Reader, or assigned Defender XDR Unified RBAC hunting access | Defender XDR and each queried table's licensed/onboarded product |
+| `Search-UnifiedAuditLog -Operations CopilotInteraction` | No Graph permission | View-Only Audit Logs or Audit Logs in Exchange Online; Purview Audit Reader or Audit Manager for portal search/export | Purview Audit, retained events, and Copilot activity |
+| Power BI Desktop | No tenant role | Local file access | Supported Windows device |
+| Publish a PBIX to an existing workspace | No Graph permission | Power BI workspace Contributor, Member, or Admin | Power BI Pro/PPU unless the workspace uses qualifying capacity |
+| Publish or update a Power BI app | No Graph permission | Power BI workspace Member or Admin | Applicable Power BI license/capacity |
+| Refresh a local/UNC Folder source in the service | No Graph permission | An on-premises gateway administrator or authorized connection creator configures the connection; the semantic model owner maps credentials | Running gateway and reachable source |
+
+Do not request `Directory.Read.All`, `Reports.Read.All`,
+`ServiceHealth.Read.All`, or `ActivityFeed.Read` for this exporter. The current
+code does not call their endpoint families. Product activation, connector
+configuration, log uploaders, tenant settings, and Conditional Access policies
+are separate administrative operations and can require additional write roles.
 
 > **Retention:** Native Defender Advanced Hunting commonly exposes about 30 days of data. Microsoft Entra sign-in and Purview Audit retention varies by license and audit policy. A query that asks for 90 or 180 days only returns what the source still retains.
 
@@ -95,14 +119,14 @@ The collector can return more than 50,000 records overall. It safely splits any 
 
 > The Graph Reports user-detail endpoint returns last-activity fields, not the required per-surface count schema, and cannot replace these Purview exports.
 >
-> Why Purview over Defender CloudAppEvents? CloudAppEvents only captures the BizChat surface — it misses in-app Copilot in Word/Excel/PPT/Outlook/Teams. Purview is the only complete source.
+> Why Purview over Defender CloudAppEvents? Purview exposes `CopilotInteraction` events across observed app hosts and workloads, while `CloudAppEvents` does not supply the required per-surface schema. These audit-derived metrics are directional: Microsoft notes that they can differ from the official Microsoft 365 Copilot usage report and Viva Insights Copilot Dashboard.
 
 ### 1.3  🔍 ai_activity_sessions.csv  (Defender Advanced Hunting — CloudAppEvents)
 
 **Output file:** `ai_activity_sessions.csv`  
 **Schema:** `UPN, AISolution, YearMonth, Sessions, ActiveDays, EstimatedPrompts, DistinctDevices, Category, RiskTier`
 
-> `CloudAppEvents` requires Defender for Cloud Apps data to be available in Advanced Hunting. MDE Plan 2 alone does not provide this table. Without it, create this exact header as a stub; activity-dependent visuals will remain empty.
+> `CloudAppEvents` requires Defender for Cloud Apps data and the Microsoft 365 activities connector to be available in Advanced Hunting. MDE Plan 2 alone does not provide this table. Without it, create this exact header as a stub; activity-dependent visuals will remain empty.
 
 <details>
 <summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
@@ -183,7 +207,7 @@ CloudAppEvents
 
 </details>
 
-> **Note:** `EstimatedPrompts` will be 0 for Microsoft 365 Copilot rows — use `ai_copilot_usage_graph.csv` (Step 1.2) for authoritative Copilot prompt counts. Some UPN values may appear as object IDs (guest/service accounts) — those rows contribute to totals but won't filter by department.
+> **Note:** `EstimatedPrompts` will be 0 for Microsoft 365 Copilot rows - use `ai_copilot_usage_graph.csv` (Step 1.2) for audit-event-derived Copilot activity. These values can differ from the official Microsoft 365 Copilot usage report. Some UPN values may appear as object IDs (guest/service accounts); those rows contribute to totals but will not filter by department.
 
 ### 1.4  ai_oauth_consents.csv  (Entra Audit Logs)
 
@@ -558,12 +582,11 @@ CloudAppEvents
 
 ---
 
-## Step 4 — Open the PBIT
+## Step 4 - Open the PBIT
 
-1. Double-click [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+1. Double-click [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit). Use [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) when you need the stable release.
 2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
    - Windows: `C:\AI_Usage_Data`
-   - Mac: `/Users/yourname/AI_Usage_Data`
 3. Click **Load**
 4. Wait for refresh (1–3 min depending on tenant size)
 5. **File → Save As** → save as PBIX with a descriptive name (e.g. `AI_Solutions_<TenantName>_<YYYY-MM-DD>.pbix`)
@@ -592,7 +615,7 @@ To keep the report current:
 1. Re-run Steps 1.x (and 3.x for Path B) on whatever cadence you want — weekly is typical.
 2. Overwrite the CSVs in your data folder.
 3. In Power BI Desktop: **Home → Refresh**, save.
-4. (Or publish to Power BI Service and configure scheduled refresh against OneDrive / SharePoint hosting the CSVs.)
+4. For Power BI Service refresh, either keep the local/UNC Folder source and configure an on-premises data gateway, or redesign the Power Query source to use the SharePoint/OneDrive connector and configure its credentials before publishing. Publishing alone does not make `C:\AI_Usage_Data` refreshable in the service.
 
 ---
 
@@ -619,10 +642,28 @@ When MDA gets deployed in your tenant later:
 
 ---
 
+## Interpretation and data protection
+
+- V27 is experimental and **In Testing**. Use the
+  [interpretation guide](INTERPRETATION_GUIDE.md) before operational use.
+- Risk scores, geo anomalies, file proximity, and estimated prompts are heuristic
+  triage signals. They are not proof of misuse, disclosure, policy breach, or data
+  leakage.
+- Purview audit-derived Copilot counts can differ from the official Microsoft 365
+  Copilot usage report.
+- Generated CSVs and derived PBIX files are not automatically labeled, encrypted,
+  or access-controlled. Apply organizational sensitivity labels, retention,
+  storage controls, and least-access rules before sharing.
+- Customers are responsible for lawful collection and use, notices and consent,
+  data residency, and compliance with organizational policy and applicable law.
+
+---
+
 ## File reference
 
 | File | Source | Schema |
 |---|---|---|
+| [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) | Current testing Power BI template; compatible with the V26 13-file contract | — |
 | [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) | Power BI template (10 pages, 123 measures) | — |
 | [AI_Usage_v26_Blueprint.md](AI_Usage_v26_Blueprint.md) | Architecture & page-tier mapping | — |
 | [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql) | All collection queries (A1–A5, B2–B8) | — |
@@ -636,7 +677,7 @@ When MDA gets deployed in your tenant later:
 | ai_oauth_consents.csv | Baseline (Entra) | No | `UPN,AppName,YearMonth,ConsentCount,LastConsent,PermissionWeight,Permissions` |
 | ai_sso_signins.csv | Baseline (Entra) | No | `UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn` |
 | ai_file_proximity.csv | MDE P2 | No (stub if missing MDE P2) | `Timestamp,UPN,AISolution,YearMonth,FileName,FolderCategory,FolderPath,SecondsToAI,NameMatchesSensitivePattern,FolderMatchesSensitive` |
-| ai_offhours_geo.csv | Defender | No | `UPN,YearMonth,TotalSessions,OffHoursSessions,OffHoursPct,DistinctCountries,AnomalousCountryCount,AnomalousCountries` |
+| ai_offhours_geo.csv | Entra ID P2 + Defender XDR Advanced Hunting | No (stub if table unavailable) | `UPN,YearMonth,TotalSessions,OffHoursSessions,OffHoursPct,DistinctCountries,AnomalousCountryCount,AnomalousCountries` |
 | ai_solutions_catalog.csv | Manual | No | `AISolution,Category,Vendor,RiskTier,DefaultDataHandling,SolutionGroup` |
 | ai_client_channel.csv | MDE P2 / MDA | No (stub if missing) | `AISite,Channel,YearMonth,EventCount` |
 | ai_appgov_alerts.csv | **MDA only** | Stub if no MDA | `Timestamp,YearMonth,UPN,AppName,AlertType,Severity,Description` |

@@ -11,8 +11,8 @@ Complete list of parameters for `Export-DefenderAdvancedHunting.ps1`, taken dire
 | `OutputPath` | `string` | — | **Yes** | Path to the CSV file that receives the merged result set. |
 | `InitialPartitionHours` | `double` | `12` | No | Initial window size, in hours, used to build the first work queue. |
 | `MaxPartitions` | `int` | `400` | No | Maximum number of **initial** partitions. If the range ÷ `InitialPartitionHours` would exceed this, the partition size is recomputed as `totalHours / MaxPartitions`. Subdivision can still create more windows beyond this count. |
-| `MinWindowMinutes` | `double` | `1` | No | Subdivision floor. A window at or below this size that still saturates cannot be split further; a warning is emitted and the returned (possibly truncated) rows are kept. |
-| `RowCap` | `int` | `10000` | No | Saturation threshold. A window returning `>= RowCap` rows triggers subdivision. `10000` is the real API cap. |
+| `MinWindowMinutes` | `double` | `1` | No | Subdivision floor. A window at or below this size that still reaches `RowCap` cannot be split further; a completeness-review warning is emitted and the returned rows are kept. |
+| `RowCap` | `int` | `10000` | No | Conservative local partition threshold. A window returning `>= RowCap` rows triggers subdivision. The default is below the currently documented service row quota and does not detect every possible result-size truncation. |
 | `TargetRowsPerWindow` | `int` | `8000` | No | Smart-subdivision target row count per sub-window (a buffer below `RowCap`). |
 | `AccessToken` | `string` | — | No | A pre-acquired Microsoft Graph bearer token. If supplied it is used directly. Never logged. |
 | `TenantId` | `string` | — | No | Microsoft Entra tenant id for client-credentials token acquisition. Used only when `-AccessToken` is not supplied. |
@@ -36,3 +36,5 @@ If none are supplied, the tool stops with an error. See [authentication.md](auth
 - Requires **PowerShell 7+**.
 - Requires the Microsoft Graph permission **`ThreatHunting.Read.All`** for real execution.
 - No tenant id, client id, secret, or token is ever hardcoded or logged.
+- Current Advanced Hunting quotas include both result-count and result-size
+  limits. Review exporter warnings and output completeness.

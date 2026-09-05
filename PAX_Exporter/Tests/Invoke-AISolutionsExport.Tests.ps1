@@ -34,6 +34,8 @@
           real data row (is NOT overwritten by a header-only stub).
       c5. Auth/seam guard -- invoking with NEITHER -QueryExecutor NOR any auth
           THROWS.
+      c10. No-MDA path -- -SkipActivitySessions writes its exact stub, does not
+          invoke CloudAppEvents, and still runs the other three presets.
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -55,6 +57,7 @@ $expectedStubs = [ordered]@{
     'ai_cloud_discovery.csv' = 'AIDomain,AppCategory,YearMonth,RiskScore,UploadVolumeMB,DownloadVolumeMB,TransactionCount,DistinctUsers,SanctionStatus'
     'ai_mda_sessions.csv'    = 'Timestamp,YearMonth,UPN,AppName,ActionType,PolicyHit,PolicyAction,IPAddress,CountryCode,EventCount'
 }
+$activitySessionsHeader = 'UPN,AISolution,YearMonth,Sessions,ActiveDays,EstimatedPrompts,DistinctDevices,Category,RiskTier'
 
 $realArtifacts = @(
     'ai_activity_sessions.csv',
@@ -528,6 +531,51 @@ try {
 }
 catch {
     Add-CaseResult -Name 'c9. -IncludeSectionA without Graph auth throws (Section-A auth guard)' -Pass $false -Detail "threw: $($_.Exception.Message)"
+}
+
+# ===========================================================================
+# CASE c10. No-MDA path: skip CloudAppEvents, write activity stub, and run the
+#   remaining three Advanced Hunting presets.
+# ===========================================================================
+Write-Host ""
+Write-Host "---- Case c10: -SkipActivitySessions produces a stub and runs other presets ----" -ForegroundColor Cyan
+try {
+    $capturedC10 = [System.Collections.Generic.List[object]]::new()
+    $c10Mock = {
+        param($ctx)
+        $capturedC10.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql })
+        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
+    }.GetNewClosure()
+
+    $outC10 = New-TempOutDir 'c10'
+    $summaryC10 = & $scriptPath `
+        -StartDate $startDate -EndDate $endDate `
+        -OutputDirectory $outC10 `
+        -QueryExecutor $c10Mock `
+        -SkipActivitySessions `
+        -WarningAction SilentlyContinue
+
+    $activityPath = Join-Path $outC10 'ai_activity_sessions.csv'
+    $activityContent = Get-Content -LiteralPath $activityPath -Raw
+    $activityLines = @($activityContent -split "`n" | Where-Object { $_.Trim().Length -gt 0 })
+    $activityEntry = @($summaryC10.Presets | Where-Object { $_.Artifact -eq 'ai_activity_sessions.csv' })
+    $classes = @($capturedC10 | ForEach-Object { Get-PresetClass -Kql $_.Kql })
+    $noCloudAppCall = @($classes | Where-Object { $_ -eq 'activity_sessions' }).Count -eq 0
+    $otherThreeRan = @('offhours_geo', 'client_channel', 'file_proximity' | ForEach-Object {
+        @($classes | Where-Object { $_ -eq $PSItem }).Count -gt 0
+    }) -notcontains $false
+    $summaryOk = ($summaryC10.PresetCount -eq 3) -and
+                 ($summaryC10.SkippedPresetCount -eq 1) -and
+                 ($activityEntry.Count -eq 1) -and
+                 ($activityEntry[0].Status -eq 'StubCreated')
+    $passC10 = ($activityLines.Count -eq 1) -and
+               ($activityLines[0] -ceq $activitySessionsHeader) -and
+               $noCloudAppCall -and $otherThreeRan -and $summaryOk
+    Add-CaseResult -Name 'c10. no-MDA path stubs activity sessions and runs other three presets' -Pass $passC10 `
+        -Detail ("headerOk={0}; noCloudAppCall={1}; otherThreeRan={2}; summaryOk={3}" -f ($activityLines[0] -ceq $activitySessionsHeader), $noCloudAppCall, $otherThreeRan, $summaryOk)
+}
+catch {
+    Add-CaseResult -Name 'c10. no-MDA path stubs activity sessions and runs other three presets' -Pass $false -Detail "threw: $($_.Exception.Message)"
 }
 
 # ===========================================================================

@@ -20,7 +20,7 @@
 //   {TIMEFILTER} — replaced per calendar-month partition with
 //       Timestamp >= datetime(<startISO>) and Timestamp < datetime(<endISO>)
 //   {USERFILTER} — normally 'true'. When a single month still exceeds the
-//       10,000-row cap and -UserBucketColumn UPN is supplied, the exporter
+//       10,000-row local partition threshold and -UserBucketColumn UPN is supplied, the exporter
 //       replaces it with hash(UPN, <N>) == <b> to split users into N hash
 //       buckets. A user's whole month hashes to ONE bucket, so per-user
 //       dcount()/aggregates stay exact. UPN is defined just above {USERFILTER},

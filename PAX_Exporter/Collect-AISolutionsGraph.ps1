@@ -666,16 +666,15 @@ else {
         })
     }
 
-    # Aggregate by UPN, App, YearMonth.
+    # Keep successful-CA and non-successful-CA sign-ins in separate aggregates
+    # so the dashboard can count each category without mixed-group suppression.
     $signinRows = [System.Collections.Generic.List[object]]::new()
-    $signinGroups = $signinInter | Group-Object -Property UPN, App, YearMonth
+    $signinGroups = $signinInter | Group-Object -Property UPN, App, YearMonth, HasCA
     foreach ($g in $signinGroups) {
         $first = $g.Group[0]
         $distinctDays = @($g.Group | ForEach-Object { $_.Date } | Select-Object -Unique).Count
         $uniqueCountries = @($g.Group | ForEach-Object { $_.Country } | Where-Object { $_ } | Select-Object -Unique)
         $countries = if ($uniqueCountries.Count -gt 0) { ($uniqueCountries -join '; ') } else { 'Unknown' }
-        $anyCA = @($g.Group | Where-Object { $_.HasCA -eq 'TRUE' }).Count -gt 0
-        $hasCAagg = if ($anyCA) { 'TRUE' } else { 'FALSE' }
         $lastSignIn = ($g.Group | ForEach-Object { $_.Date } | Measure-Object -Maximum).Maximum
         $signinRows.Add([pscustomobject]@{
             UPN                  = $first.UPN
@@ -685,7 +684,7 @@ else {
             DistinctDays         = $distinctDays
             IsGuest              = $first.IsGuest
             Countries            = $countries
-            HasConditionalAccess = $hasCAagg
+            HasConditionalAccess = $first.HasCA
             LastSignIn           = $lastSignIn
         })
     }

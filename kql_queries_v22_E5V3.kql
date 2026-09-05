@@ -27,7 +27,7 @@
 // Table availability depends on licensed and connected products:
 // CloudAppEvents requires Defender for Cloud Apps; DeviceFileEvents and
 // DeviceNetworkEvents require Defender for Endpoint; EntraIdSignInEvents
-// requires the corresponding Entra data in Defender XDR.
+// requires Microsoft Entra ID P2 and retained Entra data in Defender XDR.
 //
 // IMPORTANT: Each query's output columns must EXACTLY match the schemas below.
 //            Do NOT rename columns — Power Query expects these exact headers.
@@ -35,7 +35,8 @@
 // Prerequisites:
 //   - PowerShell 7+ with Microsoft.Graph and ExchangeOnlineManagement modules
 //   - Microsoft Defender XDR portal access (Security Reader minimum)
-//   - Microsoft Purview Audit access (Audit Reader or eDiscovery Manager)
+//   - Search-UnifiedAuditLog: View-Only Audit Logs or Audit Logs in Exchange Online
+//   - Purview portal search/export: Audit Reader or Audit Manager
 //   - Permissions: User.Read.All, LicenseAssignment.Read.All,
 //                  AuditLog.Read.All, ThreatHunting.Read.All
 //
@@ -553,8 +554,9 @@ CloudAppEvents
 //
 // Requires: MDE Plan 2 (DeviceFileEvents + DeviceNetworkEvents tables)
 //
-// This query detects files accessed within 5 minutes of an AI website visit,
-// indicating potential data exfiltration risk.
+// This query detects selected file events within 5 minutes of an AI-domain
+// connection. The temporal correlation is an investigation signal; it does not
+// prove upload, disclosure, causation, or data exfiltration.
 
 let AIDomains = dynamic([
     "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
@@ -607,7 +609,7 @@ let FileAccess =
     | where FileName !endswith ".tmp" and FileName !endswith ".log"
     | project FileTimestamp = Timestamp, DeviceId, FileName, FolderPath,
               InitiatingProcessAccountUpn;
-// Step 3: Join — files accessed within 5 minutes of AI visit
+// Step 3: Join - selected file events within 5 minutes of an AI-domain connection
 AIVisits
 | join kind=inner FileAccess on DeviceId
 | where FileTimestamp between (AITimestamp .. (AITimestamp + 5m))

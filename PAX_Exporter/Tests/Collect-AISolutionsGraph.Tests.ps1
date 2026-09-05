@@ -366,10 +366,11 @@ catch {
 }
 
 # ===========================================================================
-# CASE b3. A4 header + filter + aggregation.
-#   signIns mock: 2 AI success (same UPN/app/month, 2 distinct days, one
-#   conditionalAccessStatus='success') + 1 AI FAILED (errorCode=50126 excluded)
-#   + 1 non-AI success (excluded).
+# CASE b3. A4 header + filter + CA-aware aggregation.
+#   signIns mock: 2 AI success (same UPN/app/month, 2 distinct days, one with
+#   successful CA and one without) + 1 AI FAILED (errorCode=50126 excluded) +
+#   1 non-AI success (excluded). The two included sign-ins must remain in
+#   separate CA aggregates.
 # ===========================================================================
 Write-Host ""
 Write-Host "---- Case b3: A4 header + filter + aggregation ----" -ForegroundColor Cyan
@@ -416,16 +417,19 @@ try {
     $expectedSigninsHeader = 'UPN,Application,YearMonth,SignInCount,DistinctDays,IsGuest,Countries,HasConditionalAccess,LastSignIn'
     $firstLine = (Get-Content -LiteralPath $signinsPath)[0]
     $rows = @(Import-Csv -LiteralPath $signinsPath)
-    $row = $rows | Where-Object { $_.Application -eq 'OpenAI ChatGPT' }
+    $aiRows = @($rows | Where-Object { $_.Application -eq 'OpenAI ChatGPT' })
+    $caRow = @($aiRows | Where-Object { $_.HasConditionalAccess -eq 'TRUE' })
+    $noCaRow = @($aiRows | Where-Object { $_.HasConditionalAccess -eq 'FALSE' })
     $boundedUri = @($b3Uris | Where-Object { $_ -like '*auditLogs/signIns*' -and $_ -match 'createdDateTime%20lt%202026-06-01' }).Count -eq 1
-    $passB3 = ($firstLine -ceq $expectedSigninsHeader) -and ($rows.Count -eq 1) -and ($null -ne $row) -and `
-              ([int]$row.SignInCount -eq 2) -and ([int]$row.DistinctDays -eq 2) -and `
-              ($row.HasConditionalAccess -eq 'TRUE') -and ($row.IsGuest -eq 'TRUE') -and $boundedUri
-    Add-CaseResult -Name 'b3. A4 bounded filter, guest lookup, AI+success aggregation' -Pass $passB3 `
-        -Detail ("headerOk={0}; rows={1}; signInCount={2}; distinctDays={3}; hasCA={4}; isGuest={5}; bounded={6}" -f ($firstLine -ceq $expectedSigninsHeader), $rows.Count, $(if ($row) { $row.SignInCount } else { 'n/a' }), $(if ($row) { $row.DistinctDays } else { 'n/a' }), $(if ($row) { $row.HasConditionalAccess } else { 'n/a' }), $(if ($row) { $row.IsGuest } else { 'n/a' }), $boundedUri)
+    $passB3 = ($firstLine -ceq $expectedSigninsHeader) -and ($rows.Count -eq 2) -and `
+              ($caRow.Count -eq 1) -and ($noCaRow.Count -eq 1) -and `
+              ([int]$caRow[0].SignInCount -eq 1) -and ([int]$noCaRow[0].SignInCount -eq 1) -and `
+              ($caRow[0].IsGuest -eq 'TRUE') -and ($noCaRow[0].IsGuest -eq 'TRUE') -and $boundedUri
+    Add-CaseResult -Name 'b3. A4 bounded filter preserves separate CA and no-CA counts' -Pass $passB3 `
+        -Detail ("headerOk={0}; rows={1}; caRows={2}; noCaRows={3}; caCount={4}; noCaCount={5}; bounded={6}" -f ($firstLine -ceq $expectedSigninsHeader), $rows.Count, $caRow.Count, $noCaRow.Count, $(if ($caRow.Count) { $caRow[0].SignInCount } else { 'n/a' }), $(if ($noCaRow.Count) { $noCaRow[0].SignInCount } else { 'n/a' }), $boundedUri)
 }
 catch {
-    Add-CaseResult -Name 'b3. A4 header exact, AI+success only, SignInCount=2/DistinctDays=2/HasCA=TRUE' -Pass $false -Detail "threw: $($_.Exception.Message)"
+    Add-CaseResult -Name 'b3. A4 preserves separate CA and no-CA counts' -Pass $false -Detail "threw: $($_.Exception.Message)"
 }
 
 # ===========================================================================

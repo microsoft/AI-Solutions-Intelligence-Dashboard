@@ -21,7 +21,7 @@
             nonblank Purview surface dynamically, including future workloads,
             without requiring a new fixed CSV column.
 
-    Why a SEPARATE script (not the Graph collector): the authoritative source
+    Why a SEPARATE script (not the Graph collector): the required source
     for A2 is Microsoft Purview Audit, whose real path requires the
     ExchangeOnlineManagement module plus Connect-ExchangeOnline and the
     Search-UnifiedAuditLog cmdlet. The Section-A Graph collector deliberately
@@ -92,7 +92,9 @@
 .NOTES
     Requires PowerShell 7+. For real (non-mock) execution the identity used must
     have Exchange Online audit access (Search-UnifiedAuditLog) via an active
-    Connect-ExchangeOnline session with the ExchangeOnlineManagement module.
+    Connect-ExchangeOnline session with the ExchangeOnlineManagement module and
+    the View-Only Audit Logs or Audit Logs role. Audit-derived Copilot values can
+    differ from the official Microsoft 365 Copilot usage report.
     Returns a summary PSCustomObject (does NOT call exit). Uses -UseQuotes
     AsNeeded so the CSV header stays byte-exact. The -SearchExecutor seam keeps
     this collector credential-free testable. Source/pivot logic mirrors
