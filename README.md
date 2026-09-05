@@ -15,6 +15,7 @@
 **Related Templates & Tools:**
 
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
+[![Prerequisites](https://img.shields.io/badge/Setup-Prerequisites-0078D4)](#before-you-start-prerequisites)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
 [![V27 In Testing PBIT](https://img.shields.io/badge/Report-V27%20In%20Testing-orange)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
 [![Interpretation Guide](https://img.shields.io/badge/Guide-Interpretation-4B2D83)](INTERPRETATION_GUIDE.md)
@@ -48,6 +49,31 @@
 > 🎬 **AI Solutions Intelligence Dashboard Overview (video):** a quick walkthrough of the dashboard's capabilities, interpretation guidance, and data-collection paths.
 >
 > https://github.com/user-attachments/assets/846ed8a9-b2bd-4368-8a5e-6810697fd788
+
+---
+
+## Before you start: prerequisites
+
+You can explore with the synthetic sample data without tenant access. To populate
+the dashboard with live data, confirm the following before choosing a collection
+path.
+
+| What you need | Requirement |
+|---|---|
+| Windows and Power BI | A supported Windows environment with the latest [Power BI Desktop](https://www.microsoft.com/en-us/download/details.aspx?id=58494) |
+| Current report template | [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit), the only published PBIT |
+| PowerShell | [PowerShell 7+](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) and `ExchangeOnlineManagement` for Purview audit collection; `Microsoft.Graph` is needed only for the manual Graph examples |
+| CSV folder | One local Windows folder for all 13 files, for example `C:\AI_Usage_Data\` |
+| Microsoft Graph access | For the automated PAX path: admin-consented application permissions `User.Read.All`, `LicenseAssignment.Read.All`, `AuditLog.Read.All`, and `ThreatHunting.Read.All`; manual interactive collection also requires the corresponding supported Entra or Defender role |
+| Audit and hunting access | Exchange Online **View-Only Audit Logs** or **Audit Logs** for `Search-UnifiedAuditLog`; Purview **Audit Reader** or **Audit Manager** for portal export; Defender XDR **Security Reader**, **Global Reader**, or assigned Unified RBAC hunting access |
+| Source licenses and onboarding | The products and data sources you want to report on must be licensed, enabled, connected, and retaining data. Entra ID P2 supports sign-in events, MDE Plan 2 supplies device-event tables, and Defender for Cloud Apps is optional for MDA-backed pages |
+| Power BI Service, if publishing | A Power BI workspace role and applicable Pro, PPU, or capacity license; local Power BI Desktop use does not require this |
+
+The automated path also requires an access token or app registration. See the
+[full permission matrix](INSTRUCTIONS_v26.md#step-0--prerequisites),
+[PAX prerequisites](PAX_Exporter/README.md#before-you-start-prerequisites), and
+[authentication guide](PAX_Exporter/docs/authentication.md) for exact setup
+steps. Never store access tokens or client secrets in repository files.
 
 ---
 
