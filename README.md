@@ -8,7 +8,7 @@
 
 > **V27 In Testing - September 4, 2026:** Visual redesign with collapsible filters, updated evidence cards, corrected month-over-month KPIs, improved benchmark spacing, actual Power BI preview images, and a new interpretation guide and walkthrough. The data model continues to use the V26 13-file CSV contract.
 >
-> **Current template:** [V27 In Testing](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) is the repository's only published PBIT and has completed structural, privacy, CSV-contract, rendered-page, media, and exporter QA. "In Testing" communicates its experimental-use status, not incomplete release validation. The KQL query pack is still v26.1 and retains its June 2026 live-validation record.
+> **Current template:** [V27 In Testing](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) is the repository's only published PBIT and has completed structural, privacy, CSV-contract, rendered-page, media, and exporter QA. "In Testing" communicates its experimental-use status, not incomplete release validation. The v26.2 query pack preserves the June 2026 live-validated query logic and adds September 2026 manual/PAX parity checks.
 
 ### 📥 [Click Here to Download All Files](https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip)
 
@@ -149,7 +149,7 @@ Run the PAX scripts to produce all 13 files with conservative partitioning.
 
 **4 · [KQL query pack](kql_queries_v22_E5V3.kql)**
 
-The six validated Defender Advanced Hunting queries (v26.1).
+The six validated Defender Advanced Hunting queries (v26.2).
 
 </td>
 <td width="33%" valign="top">

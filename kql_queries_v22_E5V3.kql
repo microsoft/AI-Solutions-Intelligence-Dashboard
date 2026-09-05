@@ -1,12 +1,21 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // AI Solutions Intelligence Dashboard — Data Collection Query Pack
-// Version: v26.1 — Live-tenant validated (June 23, 2026)
+// Version: v26.2 — Manual/PAX parity validated (September 5, 2026)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // This file contains all PowerShell scripts and KQL (Kusto Query Language)
 // queries needed to populate the dashboard's 13 CSV data files.
 //
-// v26.1 changes vs. original v26 (all validated against a live tenant):
+// v26.2 changes vs. v26.1 (credential-free static/contract validation):
+//   A4  — Preserve successful-CA and non-successful-CA sign-ins as separate
+//          aggregates, matching Collect-AISolutionsGraph.ps1.
+//   B2–B6, B8 — Synchronize AI application/domain catalogs with the current
+//          PAX presets. B2 preserves any allowlisted app via the Application
+//          fallback so newly added tools are not silently discarded.
+//   B7  — Resolve known Cloud Discovery portal column-name variants
+//          automatically instead of requiring users to edit the script.
+//
+// v26.1 changes vs. original v26 (validated against a live tenant):
 //   B2  — Removed over-broad ActionType OR filter (was pulling SharePoint/Teams/
 //          OneDrive); changed AISolution fallback from `Application` to `""`;
 //          replaced AccountObjectId with IdentityInfo UPN lookup.
@@ -355,13 +364,13 @@
 //     }
 // }
 //
-// # Aggregate to user × app × month
-// $aggregated = $aiSignIns | Group-Object UPN, App, YearMonth | ForEach-Object {
+// # Aggregate to user × app × month × CA status. Keeping CA states separate
+// # prevents one protected sign-in from marking every sign-in in the month protected.
+// $aggregated = $aiSignIns | Group-Object UPN, App, YearMonth, HasCA | ForEach-Object {
 //     $grp       = $_.Group
 //     $days      = ($grp | Select-Object -ExpandProperty Date -Unique).Count
 //     $countries = ($grp | Select-Object -ExpandProperty Country -Unique |
 //                   Where-Object { $_ }) -join "; "
-//     $hasCA     = if ($grp | Where-Object HasCA -eq "TRUE") { "TRUE" } else { "FALSE" }
 //     $lastDate  = ($grp | Sort-Object Date | Select-Object -Last 1).Date
 //
 //     [PSCustomObject]@{
@@ -372,7 +381,7 @@
 //         DistinctDays         = $days
 //         IsGuest              = $grp[0].IsGuest
 //         Countries            = if ($countries) { $countries } else { "Unknown" }
-//         HasConditionalAccess = $hasCA
+//         HasConditionalAccess = $grp[0].HasCA
 //         LastSignIn           = $lastDate
 //     }
 // }
@@ -454,8 +463,8 @@
 //      The original ActionType OR arm captured all SharePoint/Teams/OneDrive
 //      traffic, polluting results with ~1,400+ non-AI rows.
 //      RawEventData has_any() removed — caused 100% resource exhaustion (30s+).
-//   2. AISolution case() fallback changed from `Application` to `""` so
-//      unrecognised apps are dropped by the isnotempty() filter below.
+//   2. AISolution case() fallback preserves `Application` so every app admitted
+//      by AIAppNames remains in the export, including newly added tools.
 //   3. UPN resolved via IdentityInfo lookup. AccountObjectId (Entra GUID) is
 //      used as fallback when IdentityInfo has no match (guest/service accounts).
 //      Rows that fall back to GUID will not join EntraUsers in the PBIT but
@@ -468,12 +477,21 @@
 //       when they are reverse-proxied through MDA Conditional Access App Control.
 
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot Studio",
-    "Security Copilot", "Copilot", "Bing Chat",
-    "ChatGPT", "OpenAI", "Claude", "Anthropic",
-    "Gemini", "Bard", "Perplexity", "Midjourney",
-    "Grammarly", "Notion", "Jasper", "Adobe Firefly",
-    "Canva", "Synthesia", "Runway", "Stability", "Hugging Face"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 // Resolve Entra ObjectId → UPN. Rows with no IdentityInfo match fall back to
 // the raw ObjectId GUID — those rows won't join EntraUsers in Power BI.
@@ -559,12 +577,21 @@ CloudAppEvents
 // prove upload, disclosure, causation, or data exfiltration.
 
 let AIDomains = dynamic([
-    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
-    "claude.ai", "gemini.google.com", "bard.google.com",
-    "perplexity.ai", "midjourney.com", "huggingface.co",
-    "stability.ai", "jasper.ai", "grammarly.com", "notion.so",
-    "firefly.adobe.com", "runwayml.com", "canva.com",
-    "app.synthesia.io"
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
 ]);
 let SensitiveNamePatterns = dynamic([
     "confidential", "secret", "password", "credential", "private",
@@ -648,10 +675,21 @@ AIVisits
 // accepts the column value used by set_difference().
 
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
-    "ChatGPT", "OpenAI", "Claude", "Anthropic",
-    "Gemini", "Perplexity", "Midjourney", "Grammarly",
-    "Notion", "Jasper", "Adobe Firefly", "Canva"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 // Step 1: Identify AI-related sign-ins
 let AISignIns =
@@ -699,14 +737,21 @@ AISignIns
 // Schema: AISite, Channel, YearMonth, EventCount
 
 let AIDomains = dynamic([
-    "copilot.microsoft.com", "copilot.cloud.microsoft",
-    "chat.openai.com", "chatgpt.com", "api.openai.com",
-    "claude.ai", "api.anthropic.com",
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
     "gemini.google.com", "bard.google.com",
-    "perplexity.ai", "midjourney.com",
-    "huggingface.co", "stability.ai", "jasper.ai",
-    "grammarly.com", "notion.so", "firefly.adobe.com",
-    "runwayml.com", "canva.com", "app.synthesia.io"
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
 ]);
 DeviceNetworkEvents
 | where Timestamp > ago(30d)
@@ -770,10 +815,21 @@ DeviceNetworkEvents
 //   2. Validated: query runs cleanly with 0 rows on non-MDA tenants (correct).
 
 let AIAppNames = dynamic([
-    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
-    "Perplexity", "Midjourney", "Grammarly", "Jasper",
-    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
-    "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 AlertInfo
 | where Timestamp > ago(30d)
@@ -831,34 +887,45 @@ AlertInfo
 // $rawPath = "DiscoveredApps_export.csv"  # ← rename to your downloaded file
 // $raw = Import-Csv $rawPath
 //
+// function Get-CloudDiscoveryValue {
+//     param(
+//         [Parameter(Mandatory)] [psobject]$Row,
+//         [Parameter(Mandatory)] [string[]]$Names,
+//         [object]$Default = ""
+//     )
+//     foreach ($name in $Names) {
+//         $property = $Row.PSObject.Properties[$name]
+//         if ($null -ne $property -and $null -ne $property.Value -and
+//             -not [string]::IsNullOrWhiteSpace([string]$property.Value)) {
+//             return $property.Value
+//         }
+//     }
+//     return $Default
+// }
+//
+// # Cloud Discovery exports are range aggregates unless the portal includes a
+// # YearMonth/Month column. Stamp range aggregates with the collection month.
+// $collectionMonth = (Get-Date).ToString("yyyy-MM")
+//
 // # Reshape to match expected schema
 // $reshaped = $raw | ForEach-Object {
+//     $yearMonth = Get-CloudDiscoveryValue -Row $_ -Names @("YearMonth", "Month") -Default $collectionMonth
 //     [PSCustomObject]@{
-//         AIDomain         = $_."App domain"
-//         AppCategory      = $_."Category"
-//         YearMonth        = (Get-Date).ToString("yyyy-MM")  # or parse from export
-//         RiskScore        = [int]$_."Score"
-//         UploadVolumeMB   = [math]::Round([double]($_."Upload (bytes)" ?? 0) / 1MB, 2)
-//         DownloadVolumeMB = [math]::Round([double]($_."Download (bytes)" ?? 0) / 1MB, 2)
-//         TransactionCount = [int]($_."Transactions" ?? 0)
-//         DistinctUsers    = [int]($_."Users" ?? 0)
-//         SanctionStatus   = $_."Tag" ?? "Untagged"
+//         AIDomain         = Get-CloudDiscoveryValue -Row $_ -Names @("App domain", "Domain")
+//         AppCategory      = Get-CloudDiscoveryValue -Row $_ -Names @("Category", "App category")
+//         YearMonth        = $yearMonth
+//         RiskScore        = [int](Get-CloudDiscoveryValue -Row $_ -Names @("Score", "Risk score") -Default 0)
+//         UploadVolumeMB   = [math]::Round([double](Get-CloudDiscoveryValue -Row $_ -Names @("Upload (bytes)", "Upload traffic (Bytes)") -Default 0) / 1MB, 2)
+//         DownloadVolumeMB = [math]::Round([double](Get-CloudDiscoveryValue -Row $_ -Names @("Download (bytes)", "Download traffic (Bytes)") -Default 0) / 1MB, 2)
+//         TransactionCount = [int](Get-CloudDiscoveryValue -Row $_ -Names @("Transactions", "Total transactions") -Default 0)
+//         DistinctUsers    = [int](Get-CloudDiscoveryValue -Row $_ -Names @("Users", "Total users") -Default 0)
+//         SanctionStatus   = Get-CloudDiscoveryValue -Row $_ -Names @("Tag", "Sanction status", "App status") -Default "Untagged"
 //     }
 // }
 //
 // $reshaped | Export-Csv -NoTypeInformation -Encoding UTF8 ai_cloud_discovery.csv
 // Write-Host "Exported $($reshaped.Count) rows to ai_cloud_discovery.csv"
 //
-// # NOTE: The MDA export column names may vary by portal version.
-// # Common column name variants:
-// #   "App domain" or "Domain"
-// #   "Score" or "Risk score"
-// #   "Upload (bytes)" or "Upload traffic (Bytes)"
-// #   "Download (bytes)" or "Download traffic (Bytes)"
-// #   "Transactions" or "Total transactions"
-// #   "Users" or "Total users"
-// #   "Tag" or "Sanction status" or "App status"
-// # Adjust the property names in the script to match your export.
 // </powershell>
 
 
@@ -884,10 +951,21 @@ AlertInfo
 //   3. Validated: 0 rows on non-MDA tenants is correct behavior.
 
 let AIAppNames = dynamic([
-    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
-    "Perplexity", "Midjourney", "Grammarly", "Jasper",
-    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
-    "Stability", "Hugging Face", "Copilot"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 // Resolve Entra ObjectId → UPN (same pattern as B2)
 let UserUpns = IdentityInfo

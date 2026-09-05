@@ -94,9 +94,11 @@ function Get-PresetClass {
     return 'unknown'
 }
 
-function New-MockAhRows {
+# QueryExecutor runs in the exporter's scope, so capture helper commands as variables.
+$getPresetClass = ${function:Get-PresetClass}
+$newMockAhRows = {
     param([string]$Kql, [int]$Count = 2)
-    $class = Get-PresetClass -Kql $Kql
+    $class = & $getPresetClass -Kql $Kql
     for ($i = 1; $i -le $Count; $i++) {
         switch ($class) {
             'activity_sessions' {
@@ -116,7 +118,7 @@ function New-MockAhRows {
             }
         }
     }
-}
+}.GetNewClosure()
 
 # ===========================================================================
 # CASE c1. Full artifact set produced (4 real CSVs + 3 stubs = 7 files).
@@ -131,7 +133,7 @@ try {
     $c1Mock = {
         param($ctx)
         $capturedC1.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql; BucketColumn = [string]$ctx.BucketColumn })
-        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
+        return @(& $newMockAhRows -Kql ([string]$ctx.Kql))
     }.GetNewClosure()
 
     $outC1 = New-TempOutDir 'c1'
@@ -182,7 +184,7 @@ try {
     $c2Mock = {
         param($ctx)
         $capturedC2.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql })
-        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
+        return @(& $newMockAhRows -Kql ([string]$ctx.Kql))
     }.GetNewClosure()
 
     $outC2 = New-TempOutDir 'c2'
@@ -276,7 +278,7 @@ try {
     $c4Mock = {
         param($ctx)
         $capturedC4.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql; BucketColumn = [string]$ctx.BucketColumn })
-        return @(New-MockAhRows -Kql ([string]$ctx.Kql) -Count 1)
+        return @(& $newMockAhRows -Kql ([string]$ctx.Kql) -Count 1)
     }.GetNewClosure()
 
     & $scriptPath `
@@ -343,8 +345,8 @@ $sectionAArtifacts = @(
 
 $ahMock = {
     param($ctx)
-    return @(New-MockAhRows -Kql ([string]$ctx.Kql))
-}
+    return @(& $newMockAhRows -Kql ([string]$ctx.Kql))
+}.GetNewClosure()
 
 $graphMock = {
     param($ctx)
@@ -544,7 +546,7 @@ try {
     $c10Mock = {
         param($ctx)
         $capturedC10.Add([PSCustomObject]@{ Kql = [string]$ctx.Kql })
-        return @(New-MockAhRows -Kql ([string]$ctx.Kql))
+        return @(& $newMockAhRows -Kql ([string]$ctx.Kql))
     }.GetNewClosure()
 
     $outC10 = New-TempOutDir 'c10'

@@ -67,13 +67,14 @@ For each of the six Defender queries (no PowerShell needed for these — they co
 
 ### Which AI tools does it collect?
 
-By default the exporter looks for 60+ of the most common AI tools (Microsoft 365
-Copilot, ChatGPT, Claude, Gemini, GitHub Copilot, Perplexity, and many more).
+By default both the manual queries and the exporter look for the same 60+ common
+AI tools (Microsoft 365 Copilot, ChatGPT, Claude, Gemini, GitHub Copilot,
+Perplexity, and many more).
 
-Want to add your own or narrow the list? It is a quick edit — open the preset
-files in the `PAX_Exporter/presets` folder and change the list at the top marked
-`EDIT HERE`. Step-by-step instructions are in
-`PAX_Exporter/docs/presets-and-kql.md` under "Customize which AI tools are
+Want to add your own or narrow the list? For the automated path, edit the preset
+files in `PAX_Exporter/presets`. For a manual run, make the same change in the
+corresponding section of `kql_queries_v22_E5V3.kql`. Step-by-step instructions
+are in `PAX_Exporter/docs/presets-and-kql.md` under "Customize which AI tools are
 collected."
 
 ### Step 3 — One file you fill in by hand

@@ -1,4 +1,4 @@
-# AI Solutions Intelligence Dashboard v26.1 / V27 In Testing - Setup Instructions
+# AI Solutions Intelligence Dashboard v26.2 / V27 In Testing - Setup Instructions
 
 **One report. Two paths.** Choose the path that matches your tenant.
 
@@ -8,6 +8,8 @@
 | **Path B — Full MDA** | M365 E5 + MDE Plan 2 + MDA + App Governance | All 13 CSVs | 0 |
 
 The PBIT is identical for both paths — the difference is just what's in the data folder.
+
+> **Validation scope:** v26.2 synchronizes the manual AI detection catalogs and output semantics with the current PAX exporter and adds credential-free regression checks. The core query logic retains its June 2026 live-tenant validation; newly added app/domain matches still depend on the names and URLs exposed by your tenant.
 
 ---
 
@@ -128,15 +130,25 @@ The collector can return more than 50,000 records overall. It safely splits any 
 > `CloudAppEvents` requires Defender for Cloud Apps data and the Microsoft 365 activities connector to be available in Advanced Hunting. MDE Plan 2 alone does not provide this table. Without it, create this exact header as a stub; activity-dependent visuals will remain empty.
 
 <details>
-<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot", "Bing Chat",
-    "ChatGPT", "OpenAI", "Claude", "Anthropic",
-    "Gemini", "Bard", "Perplexity", "Midjourney",
-    "Grammarly", "Notion", "Jasper", "Adobe Firefly",
-    "Canva", "Synthesia", "Runway", "Stability", "Hugging Face"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
@@ -163,7 +175,7 @@ CloudAppEvents
     Application has "Hugging Face", "Hugging Face",
     Application has "Canva", "Canva AI",
     Application has "Stability", "Stability AI",
-    ""
+    Application
 )
 | where isnotempty(AISolution)
 | lookup kind=leftouter UserUpns on AccountObjectId
@@ -223,16 +235,25 @@ Run the PowerShell block in KQL Section A4 (uses Graph `Get-MgAuditLogSignIn`) �
 **Schema:** `Timestamp, UPN, AISolution, YearMonth, FileName, FolderCategory, FolderPath, SecondsToAI, NameMatchesSensitivePattern, FolderMatchesSensitive`
 
 <details>
-<summary><strong>📋 Click to expand KQL query (validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIDomains = dynamic([
-    "copilot.microsoft.com", "chat.openai.com", "chatgpt.com",
-    "claude.ai", "gemini.google.com", "bard.google.com",
-    "perplexity.ai", "midjourney.com", "huggingface.co",
-    "stability.ai", "jasper.ai", "grammarly.com", "notion.so",
-    "firefly.adobe.com", "runwayml.com", "canva.com",
-    "app.synthesia.io"
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
+    "gemini.google.com", "bard.google.com",
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
 ]);
 let SensitiveNamePatterns = dynamic([
     "confidential", "secret", "password", "credential", "private",
@@ -299,20 +320,33 @@ AIVisits
 
 </details>
 
+> The one-shot manual query intentionally uses the same 30-day window on both sides of the join. The partitioned PAX preset keeps a 90-day file-side window so files just beyond a partition boundary remain visible; this is a partitioning safeguard, not a broader manual collection period.
+
 ### 1.7  🔍 ai_offhours_geo.csv  (Defender Advanced Hunting — EntraIdSignInEvents)
 
 **Output file:** `ai_offhours_geo.csv`  
 **Schema:** `UPN, YearMonth, TotalSessions, OffHoursSessions, OffHoursPct, DistinctCountries, AnomalousCountryCount, AnomalousCountries`
 
 <details>
-<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
-    "ChatGPT", "OpenAI", "Claude", "Anthropic",
-    "Gemini", "Perplexity", "Midjourney", "Grammarly",
-    "Notion", "Jasper", "Adobe Firefly", "Canva"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 let AISignIns =
     EntraIdSignInEvents
@@ -365,18 +399,25 @@ Seed example in KQL Section A5.
 **Schema:** `AISite, Channel, YearMonth, EventCount`
 
 <details>
-<summary><strong>📋 Click to expand KQL query (validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIDomains = dynamic([
-    "copilot.microsoft.com", "copilot.cloud.microsoft",
-    "chat.openai.com", "chatgpt.com", "api.openai.com",
-    "claude.ai", "api.anthropic.com",
+    "copilot.microsoft.com", "copilot.cloud.microsoft", "m365.cloud.microsoft",
+    "chat.openai.com", "chatgpt.com", "api.openai.com", "openai.com", "labs.openai.com",
+    "claude.ai", "api.anthropic.com", "anthropic.com",
     "gemini.google.com", "bard.google.com",
-    "perplexity.ai", "midjourney.com",
-    "huggingface.co", "stability.ai", "jasper.ai",
-    "grammarly.com", "notion.so", "firefly.adobe.com",
-    "runwayml.com", "canva.com", "app.synthesia.io"
+    "perplexity.ai", "poe.com", "mistral.ai", "chat.mistral.ai",
+    "deepseek.com", "chat.deepseek.com", "grok.com", "x.ai", "meta.ai",
+    "cursor.com", "cursor.sh", "codeium.com", "windsurf.com", "tabnine.com",
+    "replit.com", "sourcegraph.com",
+    "grammarly.com", "notion.so", "jasper.ai", "copy.ai", "writesonic.com",
+    "otter.ai", "fireflies.ai", "gamma.app",
+    "midjourney.com", "firefly.adobe.com", "stability.ai", "stablediffusionweb.com",
+    "leonardo.ai", "canva.com", "app.synthesia.io", "runwayml.com", "pika.art",
+    "ideogram.ai", "heygen.com", "elevenlabs.io", "descript.com", "lumalabs.ai",
+    "glean.com", "you.com",
+    "huggingface.co", "replicate.com", "cohere.com", "character.ai"
 ]);
 DeviceNetworkEvents
 | where Timestamp > ago(30d)
@@ -461,14 +502,25 @@ MDA-dependent visuals, including the Shadow AI Catalog (MDA) page, remain empty.
 **Schema:** `Timestamp, YearMonth, UPN, AppName, AlertType, Severity, Description`
 
 <details>
-<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIAppNames = dynamic([
-    "ChatGPT", "OpenAI", "Claude", "Anthropic", "Gemini",
-    "Perplexity", "Midjourney", "Grammarly", "Jasper",
-    "Notion", "Adobe Firefly", "Canva", "Synthesia", "Runway",
-    "Stability", "Hugging Face", "Copilot", "GitHub Copilot"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 AlertInfo
 | where Timestamp > ago(30d)
@@ -526,15 +578,25 @@ AlertInfo
 **Value domains:** `PolicyHit` is `TRUE` or `FALSE`; `PolicyAction` is `Allow`, `Warn`, or `Block`.
 
 <details>
-<summary><strong>📋 Click to expand KQL query (v26.1 — validated June 2026)</strong></summary>
+<summary><strong>📋 Click to expand KQL query (v26.2 — manual/PAX parity checked September 2026)</strong></summary>
 
 ```kql
 let AIAppNames = dynamic([
-    "Microsoft 365 Copilot", "GitHub Copilot", "Copilot",
-    "ChatGPT", "OpenAI", "Claude", "Anthropic",
-    "Gemini", "Perplexity", "Midjourney", "Grammarly",
-    "Notion", "Jasper", "Adobe Firefly", "Canva",
-    "Synthesia", "Runway", "Stability", "Hugging Face"
+    "Microsoft 365 Copilot", "Microsoft Copilot", "Copilot", "GitHub Copilot",
+    "Copilot Studio", "Security Copilot", "Bing Chat", "Bing Chat Enterprise",
+    "ChatGPT", "ChatGPT Enterprise", "OpenAI",
+    "Claude", "Anthropic", "Gemini", "Google Gemini", "Bard",
+    "Perplexity", "Poe", "Mistral", "Le Chat", "DeepSeek", "Grok",
+    "Meta AI", "Llama",
+    "Cursor", "Codeium", "Windsurf", "Tabnine", "Amazon Q", "CodeWhisperer",
+    "Replit", "Cody", "JetBrains AI",
+    "Grammarly", "Notion", "Notion AI", "Jasper", "Copy.ai", "Writesonic",
+    "Otter.ai", "Fireflies", "Gamma",
+    "Midjourney", "DALL-E", "Adobe Firefly", "Firefly", "Stable Diffusion",
+    "Stability", "Leonardo.Ai", "Canva", "Synthesia", "Runway", "Pika",
+    "Sora", "Ideogram", "HeyGen", "ElevenLabs", "Descript", "Luma",
+    "Glean", "You.com", "Hugging Face", "Replicate", "Cohere",
+    "Character.AI", "Harvey", "Hebbia"
 ]);
 let UserUpns = IdentityInfo
     | summarize take_any(AccountUpn) by AccountObjectId;
