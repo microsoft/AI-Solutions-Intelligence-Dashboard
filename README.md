@@ -19,7 +19,7 @@
 [![V27 In Testing PBIT](https://img.shields.io/badge/Report-V27%20In%20Testing-orange)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
 [![Interpretation Guide](https://img.shields.io/badge/Guide-Interpretation-4B2D83)](INTERPRETATION_GUIDE.md)
 [![Interpretation Storyboard](https://img.shields.io/badge/Slides-Interpretation%20Storyboard-D67213)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing%20-%20Interpretation%20Storyboard.pptx)
-[![Video Walkthrough](https://img.shields.io/badge/Video-V27%20Walkthrough-8A2BE2)](media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4)
+[![Video Overview](https://img.shields.io/badge/Video-V27%20Overview-8A2BE2)](media/AI-Solutions-Intelligence-Dashboard-Overview.mp4)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
@@ -44,6 +44,10 @@
 <div align="center"><img src="images/report-preview.gif" alt="Animated preview of all 10 AI Solutions Intelligence Dashboard pages using synthetic sample data" width="900"></div>
 
 *Actual Power BI Desktop captures from the V27 In Testing template, loaded with the repository's deterministic synthetic sample data. No tenant or employee data is shown. The original illustrative V26 carousel is preserved in [`archive/design-reference/v26-illustrative-preview`](archive/design-reference/v26-illustrative-preview/README.md).*
+
+> 🎬 **AI Solutions Intelligence Dashboard Overview (video):** a quick walkthrough of the dashboard's capabilities, interpretation guidance, and data-collection paths.
+>
+> https://github.com/user-attachments/assets/846ed8a9-b2bd-4368-8a5e-6810697fd788
 
 ---
 
