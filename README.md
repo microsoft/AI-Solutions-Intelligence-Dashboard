@@ -18,6 +18,7 @@
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
 [![V27 In Testing PBIT](https://img.shields.io/badge/Report-V27%20In%20Testing-orange)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
 [![Interpretation Guide](https://img.shields.io/badge/Guide-Interpretation-4B2D83)](INTERPRETATION_GUIDE.md)
+[![Interpretation Storyboard](https://img.shields.io/badge/Slides-Interpretation%20Storyboard-D67213)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing%20-%20Interpretation%20Storyboard.pptx)
 [![Video Walkthrough](https://img.shields.io/badge/Video-V27%20Walkthrough-8A2BE2)](media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
 [![Setup Instructions](https://img.shields.io/badge/Report-Setup%20Instructions-purple)](INSTRUCTIONS_v26.md)

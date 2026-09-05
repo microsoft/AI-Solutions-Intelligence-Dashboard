@@ -1,0 +1,12 @@
+{
+  "name": "ai-solutions-dashboard-media",
+  "version": "27.0.0",
+  "private": true,
+  "description": "Reproducible generators for AI Solutions Intelligence Dashboard media assets.",
+  "scripts": {
+    "build:storyboard": "node build_v27_storyboard.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.1"
+  }
+}
