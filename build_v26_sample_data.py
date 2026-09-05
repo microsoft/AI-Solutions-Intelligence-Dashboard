@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic, stdlib-only synthetic test-data generator.
 
-Writes 13 CSV files whose headers EXACTLY match the columns expected by
-"AI-Solutions-Intelligence-Dashboard V26.pbit" into a `sample_data_v26/` folder
-located next to this script. Output is reproducible via SEED = 20260504.
+Writes 13 CSV files whose headers EXACTLY match the V26 data contract used by
+"AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit" into a
+`sample_data_v26/` folder located next to this script. Output is reproducible
+via SEED = 20260504.
 """
 
 import csv

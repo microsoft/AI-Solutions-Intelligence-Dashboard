@@ -43,8 +43,7 @@ The PBIT is identical for both paths — the difference is just what's in the da
 
 - Power BI Desktop (latest supported Windows release)
 - One Windows folder for all CSVs, e.g. `C:\AI_Usage_Data\`
-- The current testing PBIT: [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
-- The stable PBIT: [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
+- The current and only published PBIT: [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
 - The KQL pack: [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql)
 
 Permissions you will need over the course of setup:
@@ -584,7 +583,7 @@ CloudAppEvents
 
 ## Step 4 - Open the PBIT
 
-1. Double-click [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit). Use [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) when you need the stable release.
+1. Double-click [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit), the repository's only published template.
 2. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
    - Windows: `C:\AI_Usage_Data`
 3. Click **Load**
@@ -663,8 +662,7 @@ When MDA gets deployed in your tenant later:
 
 | File | Source | Schema |
 |---|---|---|
-| [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) | Current testing Power BI template; compatible with the V26 13-file contract | — |
-| [AI-Solutions-Intelligence-Dashboard V26 Validated.pbit](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) | Power BI template (10 pages, 123 measures) | — |
+| [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) | Current and only published Power BI template; uses the V26 13-file contract | — |
 | [AI_Usage_v26_Blueprint.md](AI_Usage_v26_Blueprint.md) | Architecture & page-tier mapping | — |
 | [kql_queries_v22_E5V3.kql](kql_queries_v22_E5V3.kql) | All collection queries (A1–A5, B2–B8) | — |
 

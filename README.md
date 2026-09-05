@@ -6,9 +6,9 @@
 
 **A single Power BI report that brings together source-dependent indicators for Copilot adoption, third-party AI activity, OAuth consent risk, off-hours/geo patterns, and optional Defender for Cloud Apps data.**
 
-> **V27 In Testing - September 4, 2026:** Visual redesign with collapsible filters, updated evidence cards, corrected month-over-month KPIs, improved benchmark spacing, actual Power BI preview images, and a new interpretation guide and walkthrough. The data model and 13-file CSV contract remain compatible with V26.
+> **V27 In Testing - September 4, 2026:** Visual redesign with collapsible filters, updated evidence cards, corrected month-over-month KPIs, improved benchmark spacing, actual Power BI preview images, and a new interpretation guide and walkthrough. The data model continues to use the V26 13-file CSV contract.
 >
-> **Stable release:** [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) remains available. The KQL query pack is still v26.1 and retains its June 2026 live-validation record.
+> **Current template:** [V27 In Testing](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit) is the repository's only published PBIT and has completed structural, privacy, CSV-contract, rendered-page, media, and exporter QA. "In Testing" communicates its experimental-use status, not incomplete release validation. The KQL query pack is still v26.1 and retains its June 2026 live-validation record.
 
 ### 📥 [Click Here to Download All Files](https://github.com/microsoft/AI-Solutions-Intelligence-Dashboard/archive/refs/heads/main.zip)
 
@@ -17,7 +17,6 @@
 [![Start Here](https://img.shields.io/badge/Guide-Start%20Here-brightgreen)](DATA_SETUP_START_HERE.md)
 [![PAX Exporter](https://img.shields.io/badge/Tool-PAX%20Exporter-8A2BE2)](PAX_Exporter/README.md)
 [![V27 In Testing PBIT](https://img.shields.io/badge/Report-V27%20In%20Testing-orange)](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit)
-[![Stable V26 PBIT](https://img.shields.io/badge/Report-Stable%20V26-003087)](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit)
 [![Interpretation Guide](https://img.shields.io/badge/Guide-Interpretation-4B2D83)](INTERPRETATION_GUIDE.md)
 [![Video Walkthrough](https://img.shields.io/badge/Video-V27%20Walkthrough-8A2BE2)](media/AI-Solutions-Dashboard-V27-In-Testing-Walkthrough.mp4)
 [![Architecture Blueprint](https://img.shields.io/badge/Report-Architecture%20Blueprint-teal)](AI_Usage_v26_Blueprint.md)
@@ -25,7 +24,6 @@
 [![KQL Query Pack](https://img.shields.io/badge/Report-KQL%20Query%20Pack-darkgreen)](kql_queries_v22_E5V3.kql)
 [![Sample Data ZIP](https://img.shields.io/badge/Data-Synthetic%20Sample%20ZIP-orange)](AI-Solutions-Intelligence-Dashboard-V26-Sample-Data.zip)
 [![Sample Data Generator](https://img.shields.io/badge/Report-Sample%20Data%20Generator-orange)](build_v26_sample_data.py)
-[![PBIT Generator](https://img.shields.io/badge/Tool-PBIT%20Generator-red)](generate_pbit_v26_unified.py)
 
 **Additional Resources:**
 [Defender for Endpoint docs](https://learn.microsoft.com/defender-endpoint/) · [Defender for Cloud Apps docs](https://learn.microsoft.com/defender-cloud-apps/) · [Microsoft Purview Audit docs](https://learn.microsoft.com/purview/audit-solutions-overview) · [Advanced Hunting API](https://learn.microsoft.com/graph/api/security-security-runhuntingquery)
@@ -484,7 +482,7 @@ Required for the Behavioral Risk and Shadow AI pages.
 
 <br>
 
-1. Download [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit). Use [V26 Validated](AI-Solutions-Intelligence-Dashboard%20V26%20Validated.pbit) when you need the stable release.
+1. Download [AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit](AI-Solutions-Intelligence-Dashboard%20V27%20In%20Testing.pbit), the repository's only published template.
 2. Double-click the file → Power BI Desktop opens
 3. When prompted for **`AI_Data_Folder_Path`**, paste your folder path:
    - Windows: `C:\AI_Usage_Data`
@@ -581,7 +579,7 @@ content requires PPU access for consumers.
 
 <br>
 
-**Architecture:** The v26 Unified PBIT replaces two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a single template that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly yellow overlay when the underlying data is empty. No conditional DAX logic is needed — empty CSVs simply produce empty visuals.
+**Architecture:** The V27 PBIT builds on the unified V26 data model that replaced two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`). It gracefully handles the available customer tier. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly yellow overlay when the underlying data is empty. No conditional DAX logic is needed — empty CSVs simply produce empty visuals.
 
 **Tier model:** The report contains 10 pages total. Executive Summary, Copilot Deep Dive, Benchmarks & Targets, and the reference pages use Graph/Purview or static data. Behavioral Risk uses MDE and Entra signals. Activity, Shadow AI, department-intensity, and department-breakdown visuals depend on `CloudAppEvents` from Defender for Cloud Apps. Shadow AI Catalog (MDA) uses Cloud Discovery.
 
@@ -589,23 +587,15 @@ content requires PPU access for consumers.
 
 **Empty-CSV fallback:** Rather than `try ... otherwise` in M (which can mask real refresh errors), customers create header-only stub CSVs. When MDA is later deployed, simply overwrite the stubs with real exports — same PBIT, no changes needed.
 
-**Generator pipeline:**
+**Release integrity:**
 ```powershell
-python .\generate_pbit_v26_unified.py
-Get-FileHash '.\AI-Solutions-Intelligence-Dashboard V26 Validated.pbit' -Algorithm SHA256
+Get-FileHash '.\AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit' -Algorithm SHA256
 ```
 
-The deterministic transformer:
-
-```
-generate_pbit_v26_unified.py
-  ├─ Reads AI-Solutions-Intelligence-Dashboard V26.pbit without modifying it
-  ├─ Patches DataModelSchema and synchronized UnappliedChanges metadata
-  ├─ Removes stale report-formatting selectors
-  ├─ Removes user-specific security bindings and MSIP sensitivity-label metadata
-  ├─ Preserves all remaining package entries and ZIP metadata
-  └─ Outputs AI-Solutions-Intelligence-Dashboard V26 Validated.pbit
-```
+Expected SHA-256: `B0011494DDC4E2F4B42E19B25ED83AC8374A7D756186A713D4CDC31773C01B03`.
+Superseded V26 PBIT artifacts and their root generator were removed so the
+repository exposes one unambiguous template download. Their implementation
+history remains available through Git.
 
 **CSV count:** 13 total. `ai_copilot_surface_usage.csv` adds a normalized, future-compatible Copilot surface fact; the three MDA CSVs are `ai_appgov_alerts.csv`, `ai_cloud_discovery.csv`, and `ai_mda_sessions.csv`.
 

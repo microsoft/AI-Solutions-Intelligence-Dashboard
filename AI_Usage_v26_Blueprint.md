@@ -1,10 +1,10 @@
 # AI Usage Dashboard v26 — Unified Edition Blueprint
 
-> **⚠️ Historical design document.** This blueprint captures the original design and planning rationale (a draft 16–18 page layout and the `v21`/`v22` generator lineage). The **shipped template** is `AI-Solutions-Intelligence-Dashboard V26 Validated.pbit` with **10 pages**: Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Shadow AI Catalog (MDA), Benchmarks & Targets, Glossary & Data Dictionary, Tier Comparison. See `README.md` → *Report Pages Overview* for the current layout. The page-tier table below is retained for design history only.
+> **⚠️ Historical design document.** This blueprint captures the original design and planning rationale (a draft 16–18 page layout and the `v21`/`v22` generator lineage). The **shipped template** is now `AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit` with **10 pages**: Executive Summary, Copilot Deep Dive, Behavioral Risk, Shadow AI, Dept Intensity by Solution, Department Breakdown, Shadow AI Catalog (MDA), Benchmarks & Targets, Glossary & Data Dictionary, Tier Comparison. See `README.md` → *Report Pages Overview* for the current layout. The page-tier table below is retained for design history only.
 
 **Goal:** Replace the two parallel reports (`v22_E5_NoMDA_v2` and `v22_E5V3`) with a **single PBIT** that gracefully handles whatever tier the customer owns. MDA-specific pages are clearly suffixed `(MDA)` and display a friendly overlay when the underlying data is empty.
 
-**Output file:** `AI-Solutions-Intelligence-Dashboard V26 Validated.pbit`
+**Historical output:** The V26 unified template was superseded and is no longer distributed as a PBIT.
 
 ---
 
@@ -122,16 +122,10 @@ The validated package uses a unique month-grain Calendar built from the `YearMon
 
 ## 8. Generator architecture
 
-```
-generate_pbit_v26_unified.py
-  │
-  ├─ reads the committed V26 PBIT without modifying it
-  ├─ patches DataModelSchema and synchronized UnappliedChanges
-  ├─ removes stale report formatting selectors
-  ├─ removes user-specific security bindings and MSIP sensitivity-label metadata
-  ├─ preserves all remaining package entries and ZIP metadata
-  └─ outputs AI-Solutions-Intelligence-Dashboard V26 Validated.pbit
-```
+The historical V26 generator and its superseded source/output PBITs were
+retired from the current branch to keep a single unambiguous template download.
+Their implementation remains available in Git history. The current release
+artifact is `AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit`.
 
 ---
 

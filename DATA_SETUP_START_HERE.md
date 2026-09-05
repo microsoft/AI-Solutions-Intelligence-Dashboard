@@ -134,7 +134,7 @@ Use `Collect-AISolutionsGraph.ps1` for Entra users, license SKU names, app conse
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**. Use **V26 Validated** when you need the stable release.
+2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**, the repository's only published template.
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 1, for example:
    ```
    C:\AI_Usage_Data
@@ -246,7 +246,7 @@ Microsoft Graph and Purview files. Use the exact header-only stubs in
 ### Step 6 — Open the dashboard
 
 1. Make sure Power BI Desktop is installed (get it free from the Microsoft Store).
-2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**. Use **V26 Validated** when you need the stable release.
+2. Double-click **AI-Solutions-Intelligence-Dashboard V27 In Testing.pbit**, the repository's only published template.
 3. When it asks for **AI_Data_Folder_Path**, type the folder from Step 2, for example:
    ```
    C:\AI_Usage_Data
